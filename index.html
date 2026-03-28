@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>VocabLens</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
@@ -13,7 +13,14 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Lora:ital,wght@0,400;0,600;1,400&display=swap');
 :root{--bg:#0f0f0f;--surface:#1a1a1a;--surface2:#242424;--border:#2e2e2e;--accent:#c8a96e;--accent2:#7eb8c8;--text:#e8e4dc;--text2:#9a9590;--text3:#5a5652;--danger:#c86e6e;--success:#6ec88a;}
 *{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden;}
+@media(max-width:600px){
+  #apikey-input{width:140px!important;}
+  #vocab-pane{display:none!important;}
+  #word-popup{width:calc(100vw - 24px)!important;max-width:400px;}
+  .page-nav{flex-wrap:wrap;gap:6px;}
+  .hint{width:100%;margin-left:0!important;}
+}
 header{display:flex;align-items:center;justify-content:space-between;padding:.65rem 1.25rem;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;}
 .logo{font-size:14px;color:var(--accent);letter-spacing:.1em;}
 .logo span{color:var(--text3);}
@@ -49,7 +56,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:.65
 .page-nav button:hover:not(:disabled){border-color:var(--accent);color:var(--accent);}
 .page-nav button:disabled{opacity:.3;cursor:not-allowed;}
 .hint{margin-left:auto;color:var(--text3);font-size:11px;}
-#canvas-wrap{flex:1;overflow:auto;background:#111;padding:1.5rem;display:flex;justify-content:center;align-items:flex-start;cursor:crosshair;}
+#canvas-wrap{flex:1;overflow:auto;background:#111;padding:1.5rem;display:flex;justify-content:center;align-items:flex-start;cursor:crosshair;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
 #page-canvas{display:block;box-shadow:0 4px 32px rgba(0,0,0,.6);border-radius:2px;}
 
 /* Highlight overlay */
@@ -417,7 +424,59 @@ document.addEventListener('mousedown', e => {
     popup.style.top  = Math.max(m, Math.min(ot+e.clientY-sy, window.innerHeight-popup.offsetHeight-m))+'px';
   });
   document.addEventListener('mouseup', () => { drag = false; });
+  // タッチドラッグ
+  popup.addEventListener('touchstart', e => {
+    const t = e.touches[0];
+    drag = true; sx = t.clientX; sy = t.clientY;
+    ol = parseInt(popup.style.left)||0; ot = parseInt(popup.style.top)||0;
+    e.preventDefault();
+  }, { passive: false });
+  document.addEventListener('touchmove', e => {
+    if (!drag) return;
+    const t = e.touches[0], m = 8;
+    popup.style.left = Math.max(m, Math.min(ol+t.clientX-sx, window.innerWidth-popup.offsetWidth-m))+'px';
+    popup.style.top  = Math.max(m, Math.min(ot+t.clientY-sy, window.innerHeight-popup.offsetHeight-m))+'px';
+  }, { passive: true });
+  document.addEventListener('touchend', () => { drag = false; });
 })();
+
+// ── Touch support for canvas ──
+document.getElementById('canvas-wrap').addEventListener('touchend', e => {
+  e.preventDefault();
+  const touch = e.changedTouches[0];
+  const canvas = document.getElementById('page-canvas');
+  const rect = canvas.getBoundingClientRect();
+  if (touch.clientX < rect.left || touch.clientX > rect.right ||
+      touch.clientY < rect.top  || touch.clientY > rect.bottom) { closePopup(); return; }
+
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const cx = (touch.clientX - rect.left) * scaleX;
+  const cy = (touch.clientY - rect.top)  * scaleY;
+  _popupX = touch.clientX;
+  _popupY = touch.clientY;
+
+  const pg = pages[currentPage];
+  if (pg.hasText && pg.words.length > 0) {
+    const best = findNearestWord(pg.words, cx, cy);
+    if (best) {
+      highlightWord(best, rect, canvas);
+      showPopup();
+      lookupByText(best.word, getContext(pg.words, best));
+      return;
+    }
+  }
+  const cropW = 420, cropH = 160;
+  const cropX = Math.max(0, cx - cropW/2);
+  const cropY = Math.max(0, cy - cropH/2);
+  const cw = Math.min(canvas.width - cropX, cropW);
+  const ch = Math.min(canvas.height - cropY, cropH);
+  const crop = document.createElement('canvas');
+  crop.width = cw; crop.height = ch;
+  crop.getContext('2d').drawImage(canvas, cropX, cropY, cw, ch, 0, 0, cw, ch);
+  showPopup();
+  lookupByImage(crop.toDataURL('image/jpeg', 0.92));
+}, { passive: false });
 
 // ── API ──
 const DICT_SYSTEM = `You are an English dictionary for a Japanese reader. Respond ONLY in valid JSON (no markdown, no preamble):
