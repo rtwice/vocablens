@@ -153,6 +153,10 @@ header{display:flex;align-items:center;justify-content:space-between;padding:.65
       <input type="range" id="zoom-slider" min="30" max="200" value="100" step="5" style="width:80px;accent-color:var(--accent);">
       <span id="zoom-label" style="font-size:11px;color:var(--text2);min-width:32px;">100%</span>
       <span class="hint">単語をクリック → 意味</span>
+      <div style="display:flex;align-items:center;gap:4px;margin-left:8px;">
+        <input type="text" id="search-input" placeholder="単語を検索..." style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 8px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11px;outline:none;width:120px;" />
+        <button id="search-btn" class="btn" style="padding:3px 8px;font-size:11px;">調べる</button>
+      </div>
     </div>
     <div id="canvas-wrap">
       <div id="canvas-scaler">
@@ -264,6 +268,8 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('csv-btn').addEventListener('click', exportCSV);
   document.getElementById('csv-dl-btn').addEventListener('click', exportCSV);
   document.getElementById('prev-btn').addEventListener('click', function(){ changePage(-1); });
+  document.getElementById('search-btn').addEventListener('click', doSearch);
+  document.getElementById('search-input').addEventListener('keydown', function(e){ if(e.key==='Enter') doSearch(); });
   document.getElementById('next-btn').addEventListener('click', function(){ changePage(1); });
   document.getElementById('zoom-slider').addEventListener('input', function(){ setZoom(parseInt(this.value)); });
 
@@ -834,6 +840,17 @@ function showHistory(history) {
   });
   var vfoot = document.querySelector('.vfoot');
   document.getElementById('vocab-pane').insertBefore(sec, vfoot);
+}
+
+function doSearch() {
+  var word = document.getElementById('search-input').value.trim();
+  if (!word) return;
+  // Position popup in center of screen
+  clickX = window.innerWidth / 2;
+  clickY = window.innerHeight / 2;
+  showPopup(clickX, clickY);
+  lookupByText(word);
+  document.getElementById('search-input').value = '';
 }
 
 function setProgress(msg, pct) {
