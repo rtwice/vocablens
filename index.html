@@ -390,16 +390,59 @@ function handleWordAt(cx, cy, canvas) {
     var candidates = getNearbyWords(pg.words, cx, cy, 5);
     if (candidates.length > 0) { showPicker(candidates, canvas); return; }
   }
-  // Image fallback
+  // Image fallback: crop and ask AI for word candidates
   var cw = 400, ch = 150;
   var cx0 = Math.max(0, cx-cw/2), cy0 = Math.max(0, cy-ch/2);
   var cw2 = Math.min(canvas.width-cx0, cw), ch2 = Math.min(canvas.height-cy0, ch);
   var crop = document.createElement('canvas');
   crop.width = cw2; crop.height = ch2;
   crop.getContext('2d').drawImage(canvas, cx0, cy0, cw2, ch2, 0, 0, cw2, ch2);
-  closePicker();
-  showPopup(clickX, clickY);
-  lookupByImage(crop.toDataURL('image/jpeg', 0.92));
+  getImageCandidates(crop.toDataURL('image/jpeg', 0.92), canvas);
+}
+
+function getImageCandidates(dataUrl, canvas) {
+  var key = getApiKey();
+  if (!key) { showPopup(clickX, clickY); showError('APIキーを入力して「保存」を押してください'); return; }
+  // Show a small loading indicator in picker position
+  var picker = document.getElementById('word-picker');
+  picker.innerHTML = '<div class="wp-item" style="color:var(--text2);font-family:'JetBrains Mono',monospace;font-size:11px;display:flex;align-items:center;gap:8px;"><div class="spinner"></div>読み取り中...</div>';
+  var m = 8, pw = 160;
+  var left = clickX + 12, top = clickY - 20;
+  if (left + pw > window.innerWidth - m) left = clickX - pw - 12;
+  left = Math.max(m, Math.min(left, window.innerWidth - pw - m));
+  top  = Math.max(m, Math.min(top,  window.innerHeight - 60 - m));
+  picker.style.left = left + 'px'; picker.style.top = top + 'px';
+  picker.style.display = 'block';
+
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', API_URL, true);
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.setRequestHeader('anthropic-version', '2023-06-01');
+  xhr.setRequestHeader('anthropic-dangerous-direct-browser-access', 'true');
+  xhr.setRequestHeader('x-api-key', key);
+  xhr.onload = function() {
+    try {
+      var data = JSON.parse(xhr.responseText);
+      if (data.error) { closePicker(); showPopup(clickX, clickY); showError(data.error.message || 'APIエラー'); return; }
+      var raw = (data.content&&data.content[0]?data.content[0].text:'[]').replace(/```json|```/g,'').trim();
+      var words = JSON.parse(raw);
+      if (!Array.isArray(words) || words.length === 0) {
+        closePicker(); showPopup(clickX, clickY); showError('単語が見つかりませんでした');return;
+      }
+      // Build fake word objects for showPicker
+      var candidates = words.slice(0,5).map(function(w){ return { word: w, raw: w, x:0, y:0, w:0, h:0 }; });
+      showPicker(candidates, canvas);
+    } catch(e) { closePicker(); showPopup(clickX, clickY); showError('レスポンス解析エラー'); }
+  };
+  xhr.onerror = function() { closePicker(); showPopup(clickX, clickY); showError('通信エラー'); };
+  xhr.send(JSON.stringify({
+    model: 'claude-sonnet-4-20250514', max_tokens: 200,
+    system: 'Extract English words from the image near the center. Respond ONLY with a valid JSON array of strings (no markdown, no explanation). Example: ["methodology","applied","research"]. List 3-5 English words closest to the center of the image.',
+    messages:[{role:'user',content:[
+      {type:'image',source:{type:'base64',media_type:'image/jpeg',data:dataUrl.split(',')[1]}},
+      {type:'text',text:'List the English words near the center of this image as a JSON array.'}
+    ]}]
+  }));
 }
 
 function getNearbyWords(words, cx, cy, n) {
