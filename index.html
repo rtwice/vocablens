@@ -289,16 +289,20 @@ function extractWords(tc, vp, scale) {
     var top = y - fontSizePx;
     var h = fontSizePx;
 
-    var tokens = item.str.split(/\s+/);
+    // Split preserving spaces to track exact X offsets
+    var tokens = item.str.split(/(\s+)/);
     var charW = itemW / Math.max(item.str.length, 1);
     var offsetX = 0;
     for (var j = 0; j < tokens.length; j++) {
       var tok = tokens[j];
       if (!tok) continue;
       var tokW = tok.length * charW;
-      var clean = tok.replace(/[^a-zA-Z'-]/g, '');
-      if (clean.length >= 2) {
-        words.push({ word: clean, raw: tok, x: x + offsetX, y: top, w: tokW, h: h });
+      // Only register non-whitespace tokens as words
+      if (!/^\s+$/.test(tok)) {
+        var clean = tok.replace(/[^a-zA-Z'-]/g, '');
+        if (clean.length >= 2) {
+          words.push({ word: clean, raw: tok, x: x + offsetX, y: top, w: tokW, h: h });
+        }
       }
       offsetX += tokW;
     }
