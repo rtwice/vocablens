@@ -305,13 +305,6 @@ function extractWords(tc, vp, scale) {
     }
   }
 
-  // Debug: log first 3 words to console
-  if (words.length > 0) {
-    console.log('[VocabLens] Sample words:', words.slice(0,3).map(function(w){
-      return w.word + ' x=' + Math.round(w.x) + ' y=' + Math.round(w.y) + ' w=' + Math.round(w.w) + ' h=' + Math.round(w.h);
-    }));
-    console.log('[VocabLens] Canvas size will be: vp.width=' + vp.width + ' vp.height=' + vp.height);
-  }
   return words;
 }
 
@@ -397,27 +390,7 @@ function onCanvasClick(e) {
 function handleWordAt(cx, cy, canvas) {
   var pg = pages[currentPage];
 
-  // DEBUG: 赤丸でクリック位置を表示
-  var dbgCtx = canvas.getContext('2d');
-  dbgCtx.save();
-  dbgCtx.strokeStyle = 'red';
-  dbgCtx.lineWidth = 3;
-  dbgCtx.beginPath();
-  dbgCtx.arc(cx, cy, 10, 0, Math.PI*2);
-  dbgCtx.stroke();
-  dbgCtx.restore();
-
   if (pg.hasText && pg.words.length > 0) {
-    // DEBUG: 最初の20単語に青枠を描画
-    dbgCtx.save();
-    dbgCtx.strokeStyle = 'rgba(0,100,255,0.6)';
-    dbgCtx.lineWidth = 1;
-    for (var di = 0; di < Math.min(pg.words.length, 80); di++) {
-      var dw = pg.words[di];
-      dbgCtx.strokeRect(dw.x, dw.y, dw.w, dw.h);
-    }
-    dbgCtx.restore();
-
     var best = findNearestWord(pg.words, cx, cy);
     if (best) {
       highlightWord(best, canvas);
