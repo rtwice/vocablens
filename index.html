@@ -281,8 +281,9 @@ function extractWords(tc, vp, scale) {
     // t[3] already includes the scale factor from vp.transform
     var fontSizePx = Math.abs(t[3]);
 
-    // item.width is in PDF user space units - multiply by scale to get canvas pixels
-    var itemW = item.width * scale;
+    // item.width is in PDF user space - transform it to canvas pixels using scale
+    // vp.transform[0] is the X scale factor (= scale = 2)
+    var itemW = item.width * Math.abs(vp.transform[0]);
 
     // top of text = baseline - fontHeight
     var top = y - fontSizePx;
@@ -303,11 +304,10 @@ function extractWords(tc, vp, scale) {
     }
   }
 
-  // Debug log
   if (words.length > 0) {
-    console.log('[VL] vp.transform:', JSON.stringify(vp.transform));
-    console.log('[VL] first item.transform:', JSON.stringify(tc.items[0] ? tc.items[0].transform : null));
-    console.log('[VL] first 3 words:', JSON.stringify(words.slice(0,3).map(function(w){ return {word:w.word, x:Math.round(w.x), y:Math.round(w.y), w:Math.round(w.w), h:Math.round(w.h)}; })));
+    console.log('[VL2] vp.transform='+JSON.stringify(vp.transform)+' scale='+scale);
+    if (tc.items[0]) console.log('[VL2] item0.transform='+JSON.stringify(tc.items[0].transform)+' width='+tc.items[0].width+' height='+tc.items[0].height);
+    console.log('[VL2] words[0]='+ JSON.stringify(words[0]));
   }
   return words;
 }
