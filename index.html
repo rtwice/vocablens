@@ -432,8 +432,10 @@ document.addEventListener('mousedown', e => {
     popup.style.top  = Math.max(m, Math.min(ot+e.clientY-sy, window.innerHeight-popup.offsetHeight-m))+'px';
   });
   document.addEventListener('mouseup', () => { drag = false; });
-  // タッチドラッグ
+  // タッチドラッグ（ボタン・テキスト上は除外）
   popup.addEventListener('touchstart', e => {
+    const tag = e.target.tagName.toLowerCase();
+    if (tag === 'button' || e.target.closest('.pa') || e.target.closest('#pbody')) return;
     const t = e.touches[0];
     drag = true; sx = t.clientX; sy = t.clientY;
     ol = parseInt(popup.style.left)||0; ot = parseInt(popup.style.top)||0;
