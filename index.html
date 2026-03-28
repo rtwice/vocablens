@@ -476,16 +476,20 @@ function showPicker(candidates, canvas) {
     var item = document.createElement('div');
     item.className = 'wp-item';
     item.innerHTML = '<b>' + w.word + '</b>';
-    function onPick(e) {
-      e.preventDefault(); e.stopPropagation();
+    item.addEventListener('click', function(e) {
+      e.stopPropagation();
       closePicker();
       highlightWord(w, canvas);
-      var px = clickX + 8, py = clickY;
-      showPopup(px, py);
+      showPopup(clickX + 8, clickY);
       lookupByText(w.word);
-    }
-    item.addEventListener('click', onPick);
-    item.addEventListener('touchend', onPick);
+    });
+    item.addEventListener('touchend', function(e) {
+      e.stopPropagation();
+      closePicker();
+      highlightWord(w, canvas);
+      showPopup(clickX + 8, clickY);
+      lookupByText(w.word);
+    });
     picker.appendChild(item);
   });
   // Position to the right of click
