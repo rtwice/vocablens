@@ -357,7 +357,7 @@ function renderPage(idx) {
 function applyZoomToCanvas() {
   var canvas = document.getElementById('page-canvas');
   if (canvas.width > 0) {
-    canvas.style.width = Math.round(canvas.width * zoomLevel / 100) + 'px';
+    canvas.style.width = Math.round(canvas.width * zoomLevel / 200) + 'px';
     canvas.style.height = 'auto';
   }
 }
@@ -372,7 +372,8 @@ function setZoom(val) {
   document.getElementById('zoom-label').textContent = val + '%';
   var canvas = document.getElementById('page-canvas');
   if (canvas.width > 0) {
-    canvas.style.width = Math.round(canvas.width * val / 100) + 'px';
+    // canvas is rendered at scale=2 (retina), so 100% zoom = canvas.width/2 CSS px
+    canvas.style.width = Math.round(canvas.width * val / 200) + 'px';
     canvas.style.height = 'auto';
   }
 }
