@@ -415,7 +415,7 @@ document.addEventListener('mousedown', e => {
       !e.target.closest('#canvas-wrap')) closePopup();
 });
 
-// Draggable popup
+// Draggable popup (mouse only - touch drag removed to avoid interference)
 (function() {
   const popup = document.getElementById('word-popup');
   let drag = false, sx = 0, sy = 0, ol = 0, ot = 0;
@@ -432,22 +432,6 @@ document.addEventListener('mousedown', e => {
     popup.style.top  = Math.max(m, Math.min(ot+e.clientY-sy, window.innerHeight-popup.offsetHeight-m))+'px';
   });
   document.addEventListener('mouseup', () => { drag = false; });
-  // タッチドラッグ（ボタン・テキスト上は除外）
-  popup.addEventListener('touchstart', e => {
-    const tag = e.target.tagName.toLowerCase();
-    if (tag === 'button' || e.target.closest('.pa') || e.target.closest('#pbody')) return;
-    const t = e.touches[0];
-    drag = true; sx = t.clientX; sy = t.clientY;
-    ol = parseInt(popup.style.left)||0; ot = parseInt(popup.style.top)||0;
-    e.preventDefault();
-  }, { passive: false });
-  document.addEventListener('touchmove', e => {
-    if (!drag) return;
-    const t = e.touches[0], m = 8;
-    popup.style.left = Math.max(m, Math.min(ol+t.clientX-sx, window.innerWidth-popup.offsetWidth-m))+'px';
-    popup.style.top  = Math.max(m, Math.min(ot+t.clientY-sy, window.innerHeight-popup.offsetHeight-m))+'px';
-  }, { passive: true });
-  document.addEventListener('touchend', () => { drag = false; });
 })();
 
 // ── Touch support for canvas ──
