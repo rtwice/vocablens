@@ -46,11 +46,26 @@ header{display:flex;align-items:center;justify-content:space-between;padding:.65
 #canvas-wrap{flex:1;overflow:auto;background:#111;padding:1.5rem;display:flex;justify-content:center;align-items:flex-start;}
 #canvas-scaler{display:inline-block;}
 #page-canvas{display:block;box-shadow:0 4px 32px rgba(0,0,0,.6);border-radius:2px;cursor:crosshair;}
-#word-picker{position:fixed;z-index:9998;background:#1c1c1c;border:1px solid #383838;border-radius:10px;padding:6px;min-width:140px;max-width:220px;box-shadow:0 8px 24px rgba(0,0,0,.7);display:none;}
-.wp-item{padding:6px 10px;border-radius:6px;cursor:pointer;font-family:'Lora',serif;font-size:14px;color:var(--text);transition:background .1s;}
+#word-picker-panel{border-bottom:1px solid var(--border);display:none;flex-direction:column;}
+#word-picker-panel .wp-header{padding:.5rem 1rem;font-size:10px;color:var(--text3);letter-spacing:.1em;border-bottom:1px solid var(--border);}
+.wp-item{padding:7px 1rem;cursor:pointer;font-family:'Lora',serif;font-size:14px;color:var(--text);transition:background .1s;border-bottom:1px solid var(--border);}
+.wp-item:last-child{border-bottom:none;}
 .wp-item:hover,.wp-item:active{background:var(--surface2);}
 .wp-item b{color:var(--accent);}
-#word-picker{position:fixed;z-index:9999;background:#1c1c1c;border:1px solid #383838;border-radius:12px;padding:1rem 1.1rem;width:320px;max-width:calc(100vw - 24px);max-height:calc(100vh - 32px);overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,.75);display:none;}
+#word-def-panel{border-bottom:1px solid var(--border);display:none;flex-direction:column;padding:.75rem 1rem;}
+.wd-word{font-family:'Lora',serif;font-size:18px;font-weight:600;color:var(--accent);margin-bottom:2px;}
+.wd-phon{font-size:11px;color:var(--text3);margin-bottom:8px;}
+.wd-meaning{margin-bottom:8px;}
+.wd-num{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 5px;color:var(--accent);margin-bottom:3px;}
+.wd-tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;border-radius:4px;padding:1px 5px;margin-bottom:3px;margin-left:3px;}
+.wd-tag.d{background:#1a2a1a;border:1px solid #2a3a2a;color:#6ec88a;}
+.wd-tag.f{background:#1a1a2a;border:1px solid #2a2a4a;color:var(--accent2);}
+.wd-def{font-family:'Lora',serif;font-size:13px;line-height:1.7;color:var(--text);}
+.wd-ex{font-size:11px;color:var(--text2);font-style:italic;border-left:2px solid var(--border);padding-left:8px;margin-top:4px;line-height:1.6;}
+.wd-note{font-size:11px;color:var(--text2);line-height:1.6;margin-top:6px;padding-top:6px;border-top:1px solid var(--border);}
+.wd-actions{display:flex;gap:6px;justify-content:flex-end;margin-top:8px;}
+.wd-loading{font-size:12px;color:var(--text2);padding:6px 0;display:flex;align-items:center;gap:8px;}
+#word-popup{position:fixed;z-index:9999;background:#1c1c1c;border:1px solid #383838;border-radius:12px;padding:1rem 1.1rem;width:320px;max-width:calc(100vw - 24px);max-height:calc(100vh - 32px);overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,.75);display:none;}
 .pw{font-family:'Lora',serif;font-size:20px;font-weight:600;color:var(--accent);margin-bottom:2px;}
 .pp{font-size:11px;color:var(--text3);margin-bottom:10px;}
 .pmeaning{margin-bottom:10px;}
@@ -127,11 +142,25 @@ header{display:flex;align-items:center;justify-content:space-between;padding:.65
   </div>
   <div id="vocab-pane">
     <div class="vh">WORD LIST</div>
+    <!-- 候補リスト -->
+    <div id="word-picker-panel">
+      <div class="wp-header">どの単語？</div>
+    </div>
+    <!-- 意味表示 -->
+    <div id="word-def-panel">
+      <div class="wd-word" id="wd-word"></div>
+      <div class="wd-phon" id="wd-phon"></div>
+      <div id="wd-body"><div class="wd-loading"><div class="spinner"></div>調べています...</div></div>
+      <div class="wd-actions">
+        <button class="pbtn" id="btn-wd-close">閉じる</button>
+        <button class="pbtn save" id="btn-wd-save">+ 保存</button>
+      </div>
+    </div>
+    <!-- 保存済みリスト -->
     <div id="vocab-list"><div class="vempty" id="vempty">単語をクリックして保存しよう</div></div>
     <div class="vfoot"><button class="btn primary" style="width:100%" onclick="exportCSV()">CSV ダウンロード</button></div>
   </div>
 </div>
-<div id="word-picker"></div>
 <div id="word-popup">
   <div class="pw" id="pw"></div>
   <div class="pp" id="pp"></div>
@@ -156,6 +185,8 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('btn-save-key').addEventListener('click', saveApiKey);
   document.getElementById('btn-close-popup').addEventListener('click', closePopup);
   document.getElementById('btn-save-word').addEventListener('click', saveWord);
+  document.getElementById('btn-wd-close').addEventListener('click', closePicker);
+  document.getElementById('btn-wd-save').addEventListener('click', saveWordFromPanel);
   document.getElementById('prev-btn').addEventListener('click', function(){ changePage(-1); });
   document.getElementById('next-btn').addEventListener('click', function(){ changePage(1); });
   document.getElementById('zoom-slider').addEventListener('input', function(){ setZoom(parseInt(this.value)); });
@@ -448,42 +479,35 @@ function getNearbyWords(words, cx, cy, n) {
   return result;
 }
 
+var _pendingCanvas = null;
+
 function showWordPicker(candidates, canvas) {
-  closePicker();
-  var picker = document.getElementById('word-picker');
-  picker.innerHTML = '';
+  _pendingCanvas = canvas;
+  // Hide def panel
+  document.getElementById('word-def-panel').style.display = 'none';
+
+  var panel = document.getElementById('word-picker-panel');
+  // Clear old items (keep header)
+  var header = panel.querySelector('.wp-header');
+  panel.innerHTML = '';
+  panel.appendChild(header);
+
   candidates.forEach(function(w) {
     var item = document.createElement('div');
     item.className = 'wp-item';
     item.innerHTML = '<b>' + w.word + '</b>';
-    item.addEventListener('click', function(e) {
-      e.stopPropagation();
-      closePicker();
+    function pick(e) {
+      e.preventDefault(); e.stopPropagation();
+      document.getElementById('word-picker-panel').style.display = 'none';
       highlightWord(w, canvas);
-      showPopup();
-      lookupByText(w.word);
-    });
-    // Touch support
-    item.addEventListener('touchend', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      closePicker();
-      highlightWord(w, canvas);
-      showPopup();
-      lookupByText(w.word);
-    });
-    picker.appendChild(item);
+      showDefPanel(w.word);
+    }
+    item.addEventListener('click', pick);
+    item.addEventListener('touchend', pick);
+    panel.appendChild(item);
   });
-  // Position near click
-  var m = 8;
-  var pw = 160, ph = candidates.length * 36 + 12;
-  var left = popupX + 12, top = popupY - ph / 2;
-  if (left + pw > window.innerWidth - m) left = popupX - pw - 12;
-  left = Math.max(m, Math.min(left, window.innerWidth - pw - m));
-  top  = Math.max(m, Math.min(top,  window.innerHeight - ph - m));
-  picker.style.left = left + 'px';
-  picker.style.top  = top  + 'px';
-  picker.style.display = 'block';
+
+  panel.style.display = 'flex';
 }
 
 function closePicker() {
@@ -653,8 +677,66 @@ function closePopup() {
   document.getElementById('word-popup').style.display = 'none';
 }
 function closePicker() {
-  var p = document.getElementById('word-picker');
-  if (p) p.style.display = 'none';
+  document.getElementById('word-picker-panel').style.display = 'none';
+  document.getElementById('word-def-panel').style.display = 'none';
+}
+
+function showDefPanel(word) {
+  var panel = document.getElementById('word-def-panel');
+  document.getElementById('wd-word').textContent = word;
+  document.getElementById('wd-phon').textContent = '';
+  document.getElementById('wd-body').innerHTML = '<div class="wd-loading"><div class="spinner"></div>調べています...</div>';
+  document.getElementById('btn-wd-save').textContent = '+ 保存';
+  document.getElementById('btn-wd-save').className = 'pbtn save';
+  panel.style.display = 'flex';
+  // Check cache
+  var cached = vocabList.filter(function(v){ return v.word.toLowerCase() === word.toLowerCase(); })[0];
+  if (cached) {
+    renderDefPanel({ word: cached.word, phonetic:'', meanings:[], definition: cached.definition, example: cached.example }, true);
+    return;
+  }
+  callAPI({ model:'claude-sonnet-4-20250514', max_tokens:600, system:DICT_SYSTEM,
+    messages:[{role:'user',content:'Define: "' + word + '"'}] },
+    function(data) { renderDefPanel(parseResult(data), false); }
+  );
+}
+
+function parseResult(data) {
+  try {
+    var raw = (data.content && data.content[0] ? data.content[0].text : '{}').replace(/```json|```/g,'').trim();
+    return JSON.parse(raw);
+  } catch(e) { return {}; }
+}
+
+function renderDefPanel(obj, isSaved) {
+  currentWord = obj.word || document.getElementById('wd-word').textContent;
+  currentDef = (obj.meanings||[]).map(function(m){ return m.definition; }).join(' / ') || obj.definition || '';
+  currentEx = obj.example || '';
+  document.getElementById('wd-word').textContent = currentWord;
+  document.getElementById('wd-phon').textContent = obj.phonetic || '';
+  var html = '';
+  (obj.meanings||[]).forEach(function(m,i){
+    html += '<div class="wd-meaning"><span class="wd-num">'+(i+1)+'</span>'
+      +(m.sense?'<span class="wd-tag d">'+m.sense+'</span>':'')
+      +(m.tag?'<span class="wd-tag f">'+m.tag+'</span>':'')
+      +'<div class="wd-def">'+m.definition+'</div></div>';
+  });
+  if (!obj.meanings||!obj.meanings.length) html='<div class="wd-def">'+(obj.definition||'')+'</div>';
+  if (obj.note) html+='<div class="wd-note">'+obj.note+'</div>';
+  if (obj.example) html+='<div class="wd-ex">'+obj.example+'</div>';
+  document.getElementById('wd-body').innerHTML = html;
+  var sb = document.getElementById('btn-wd-save');
+  sb.textContent = isSaved ? '✓ 保存済み' : '+ 保存';
+  sb.className = isSaved ? 'pbtn saved' : 'pbtn save';
+}
+
+function saveWordFromPanel() {
+  if (!currentWord) return;
+  if (vocabList.some(function(v){ return v.word.toLowerCase() === currentWord.toLowerCase(); })) return;
+  vocabList.push({ word: currentWord, definition: currentDef, example: currentEx });
+  updateVocabUI();
+  document.getElementById('btn-wd-save').textContent = '✓ 保存済み';
+  document.getElementById('btn-wd-save').className = 'pbtn saved';
 }
 
 // ── API ──
@@ -713,9 +795,9 @@ function lookupByImage(dataUrl) {
 }
 
 function renderResult(data) {
+  // Used for image fallback (floating popup)
   try {
-    var raw = (data.content && data.content[0] ? data.content[0].text : '{}').replace(/```json|```/g,'').trim();
-    var obj = JSON.parse(raw);
+    var obj = parseResult(data);
     currentWord = obj.word || '';
     currentDef = (obj.meanings||[]).map(function(m){ return m.definition; }).join(' / ') || obj.definition || '';
     currentEx = obj.example || '';
