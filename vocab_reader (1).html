@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VocabLens</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  if (typeof pdfjsLib !== 'undefined')
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+</script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Lora:ital,wght@0,400;0,600;1,400&display=swap');
+:root{--bg:#0f0f0f;--surface:#1a1a1a;--surface2:#242424;--border:#2e2e2e;--accent:#c8a96e;--accent2:#7eb8c8;--text:#e8e4dc;--text2:#9a9590;--text3:#5a5652;--danger:#c86e6e;--success:#6ec88a;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+header{display:flex;align-items:center;justify-content:space-between;padding:.65rem 1.25rem;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;}
+.logo{font-size:14px;color:var(--accent);letter-spacing:.1em;}
+.logo span{color:var(--text3);}
+.hr{display:flex;align-items:center;gap:8px;}
+.badge{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:2px 10px;font-size:11px;color:var(--text2);}
+.badge b{color:var(--accent);}
+.btn{font-family:'JetBrains Mono',monospace;font-size:11px;padding:5px 12px;border-radius:6px;border:1px solid var(--border);cursor:pointer;background:transparent;color:var(--text2);transition:all .15s;}
+.btn:hover{border-color:var(--accent);color:var(--accent);}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#0f0f0f;font-weight:500;}
+.btn.primary:hover{opacity:.85;}
+.btn:disabled{opacity:.3;cursor:not-allowed;}
+.main{display:flex;flex:1;overflow:hidden;}
+
+/* Upload */
+#upload-pane{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;}
+.drop-zone{width:100%;max-width:440px;border:1.5px dashed var(--border);border-radius:16px;padding:3rem 2rem;text-align:center;cursor:pointer;background:var(--surface);transition:all .2s;}
+.drop-zone:hover,.drop-zone.dragover{border-color:var(--accent);background:#1c1810;}
+.drop-icon{width:48px;height:48px;margin:0 auto 1rem;background:var(--surface2);border-radius:10px;display:flex;align-items:center;justify-content:center;}
+.drop-icon svg{width:22px;height:22px;stroke:var(--accent);fill:none;stroke-width:1.5;}
+.drop-title{font-size:16px;color:var(--text);margin-bottom:6px;font-family:'Lora',serif;}
+.drop-sub{font-size:12px;color:var(--text2);}
+.drop-sub b{color:var(--accent2);}
+#file-input{display:none;}
+.prog-wrap{width:100%;max-width:440px;margin-top:1.25rem;display:none;}
+.prog-label{font-size:11px;color:var(--text2);margin-bottom:5px;}
+.prog-bar{height:2px;background:var(--border);border-radius:2px;overflow:hidden;}
+.prog-fill{height:100%;background:var(--accent);transition:width .3s;width:0%;}
+
+/* Reader */
+#reader-pane{flex:1;display:none;flex-direction:column;overflow:hidden;border-right:1px solid var(--border);}
+.page-nav{display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;font-size:11px;color:var(--text2);}
+.page-nav button{background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text2);padding:3px 9px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:11px;transition:all .15s;}
+.page-nav button:hover:not(:disabled){border-color:var(--accent);color:var(--accent);}
+.page-nav button:disabled{opacity:.3;cursor:not-allowed;}
+.hint{margin-left:auto;color:var(--text3);font-size:11px;}
+#canvas-wrap{flex:1;overflow:auto;background:#111;padding:1.5rem;display:flex;justify-content:center;align-items:flex-start;cursor:crosshair;}
+#page-canvas{display:block;box-shadow:0 4px 32px rgba(0,0,0,.6);border-radius:2px;}
+
+/* Highlight overlay */
+#highlight-canvas{position:fixed;pointer-events:none;z-index:10;opacity:0;transition:opacity .3s;}
+
+/* Popup */
+#word-popup{position:fixed;z-index:500;background:#1c1c1c;border:1px solid #383838;border-radius:12px;padding:1rem 1.1rem;width:340px;max-height:calc(100vh - 32px);overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,.75);display:none;animation:fadeUp .15s ease;user-select:none;}
+#word-popup::before{content:'⠿⠿⠿';display:block;text-align:center;color:var(--text3);font-size:10px;letter-spacing:4px;margin:-4px 0 8px;cursor:grab;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.pw{font-family:'Lora',serif;font-size:21px;font-weight:600;color:var(--accent);margin-bottom:2px;}
+.pp{font-size:11px;color:var(--text3);margin-bottom:10px;}
+.pmeaning{margin-bottom:10px;}
+.pmnum{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;color:var(--accent);margin-bottom:4px;}
+.pmtag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;border-radius:4px;padding:1px 6px;margin-bottom:4px;margin-left:4px;}
+.pmtag.domain{background:#1a2a1a;border:1px solid #2a3a2a;color:#6ec88a;}
+.pmtag.field{background:#1a1a2a;border:1px solid #2a2a4a;color:var(--accent2);}
+.pmdef{font-family:'Lora',serif;font-size:14px;line-height:1.75;color:var(--text);}
+.pex{font-size:12px;color:var(--text2);font-style:italic;border-left:2px solid var(--border);padding-left:8px;margin-top:4px;line-height:1.6;}
+.pnote{font-size:12px;color:var(--text2);line-height:1.6;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);}
+.pload{font-size:12px;color:var(--text2);padding:6px 0;display:flex;align-items:center;gap:8px;}
+.spinner{width:14px;height:14px;border:1.5px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.pa{display:flex;gap:8px;justify-content:flex-end;margin-top:4px;}
+.pbtn{font-family:'JetBrains Mono',monospace;font-size:11px;padding:5px 12px;border-radius:6px;border:1px solid var(--border);cursor:pointer;background:transparent;color:var(--text2);transition:all .15s;}
+.pbtn:hover{border-color:var(--text2);color:var(--text);}
+.pbtn.save{background:var(--accent);border-color:var(--accent);color:#0f0f0f;font-weight:500;}
+.pbtn.saved{background:var(--surface2);border-color:var(--success);color:var(--success);}
+
+/* Vocab pane */
+#vocab-pane{width:300px;min-width:260px;display:none;flex-direction:column;background:var(--surface);border-left:1px solid var(--border);}
+.vh{padding:.75rem 1rem;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3);letter-spacing:.1em;}
+#vocab-list{flex:1;overflow-y:auto;}
+.vi{padding:.65rem 1rem;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:8px;}
+.vi:hover{background:var(--surface2);}
+.viw{font-family:'Lora',serif;font-size:14px;font-weight:600;color:var(--accent);margin-bottom:2px;}
+.vid{font-size:11px;color:var(--text2);line-height:1.5;}
+.vdel{background:none;border:none;color:var(--text3);cursor:pointer;font-size:15px;flex-shrink:0;transition:color .1s;}
+.vdel:hover{color:var(--danger);}
+.vempty{padding:2rem 1rem;text-align:center;font-size:11px;color:var(--text3);line-height:2;}
+.vfoot{padding:.75rem 1rem;border-top:1px solid var(--border);}
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Vocab<span>Lens</span></div>
+  <div class="hr">
+    <input type="password" id="apikey-input" placeholder="APIキー: sk-ant-..." style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 10px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11px;outline:none;width:220px;"/>
+    <button class="btn" onclick="saveApiKey()">保存</button>
+    <span id="apikey-status" style="font-size:11px;display:none;"></span>
+    <div class="badge">saved: <b id="count">0</b></div>
+    <button class="btn" id="reset-btn" style="display:none" onclick="resetApp()">← 新しいファイル</button>
+    <button class="btn primary" id="csv-btn" disabled onclick="exportCSV()">CSV出力</button>
+  </div>
+</header>
+
+<div class="main">
+  <div id="upload-pane">
+    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+      <div class="drop-icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg></div>
+      <div class="drop-title">ファイルをドロップ</div>
+      <div class="drop-sub" style="margin-top:6px"><b>PDF</b> または <b>画像</b>（複数可）</div>
+      <div class="drop-sub" style="margin-top:4px;color:var(--text3)">JPG · PNG · WEBP · PDF</div>
+      <input type="file" id="file-input" multiple accept=".pdf,image/*">
+    </div>
+    <div class="prog-wrap" id="prog-wrap">
+      <div class="prog-label" id="prog-label">読み込み中...</div>
+      <div class="prog-bar"><div class="prog-fill" id="prog-fill"></div></div>
+    </div>
+  </div>
+
+  <div id="reader-pane">
+    <div class="page-nav">
+      <button id="prev-btn" onclick="changePage(-1)" disabled>← prev</button>
+      <span id="page-info">1 / 1</span>
+      <button id="next-btn" onclick="changePage(1)" disabled>next →</button>
+      <span class="hint">単語をクリック → 意味表示</span>
+    </div>
+    <div id="canvas-wrap">
+      <canvas id="page-canvas"></canvas>
+    </div>
+  </div>
+
+  <div id="vocab-pane">
+    <div class="vh">WORD LIST</div>
+    <div id="vocab-list"><div class="vempty" id="vempty">単語をクリックして保存しよう</div></div>
+    <div class="vfoot"><button class="btn primary" style="width:100%" onclick="exportCSV()">CSV ダウンロード</button></div>
+  </div>
+</div>
+
+<div id="word-popup">
+  <div class="pw" id="pw"></div>
+  <div class="pp" id="pp"></div>
+  <div id="pbody"><div class="pload"><div class="spinner"></div>調べています...</div></div>
+  <div class="pa" id="pa" style="display:none">
+    <button class="pbtn" onclick="closePopup()">閉じる</button>
+    <button class="pbtn save" id="save-btn" onclick="saveWord()">+ 保存</button>
+  </div>
+</div>
+
+<script>
+const API = 'https://api.anthropic.com/v1/messages';
+let pages = [], currentPage = 0, vocabList = [];
+let currentWord = '', currentDef = '', currentEx = '';
+let _apiKey = '', _popupX = 0, _popupY = 0;
+
+// ── API key ──
+function saveApiKey() {
+  const k = document.getElementById('apikey-input').value.trim();
+  if (!k.startsWith('sk-ant-')) { showKeyStatus('sk-ant- で始まるキーを入力してください', 'var(--danger)'); return; }
+  _apiKey = k;
+  showKeyStatus('✓ セット完了', 'var(--success)');
+}
+function getApiKey() { return _apiKey || document.getElementById('apikey-input').value.trim(); }
+function showKeyStatus(msg, color) {
+  const el = document.getElementById('apikey-status');
+  el.style.display = 'inline'; el.style.color = color; el.textContent = msg;
+}
+
+// ── File handling ──
+const dz = document.getElementById('drop-zone'), fi = document.getElementById('file-input');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
+fi.addEventListener('change', e => handleFiles(e.target.files));
+
+async function handleFiles(files) {
+  if (!files.length) return;
+  pages = [];
+  setProgress('読み込み中...', 10);
+  const arr = Array.from(files);
+  for (let i = 0; i < arr.length; i++) {
+    setProgress(`処理中: ${arr[i].name} (${i+1}/${arr.length})`, 10 + (i/arr.length)*85);
+    if (arr[i].type === 'application/pdf') await loadPDF(arr[i]);
+    else if (arr[i].type.startsWith('image/')) await loadImage(arr[i]);
+  }
+  setProgress(`完了 — ${pages.length}ページ`, 100);
+  setTimeout(showReader, 400);
+}
+
+async function loadPDF(file) {
+  const ab = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page = await pdf.getPage(p);
+    const scale = 2;
+    const vp = page.getViewport({ scale });
+    // canvasに描画
+    const c = document.createElement('canvas');
+    c.width = vp.width; c.height = vp.height;
+    await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
+    // テキスト座標を取得
+    const tc = await page.getTextContent();
+    const words = extractWords(tc, vp, scale);
+    pages.push({
+      dataUrl: c.toDataURL('image/jpeg', 0.92),
+      label: `${file.name} p.${p}`,
+      words,
+      hasText: words.length > 5
+    });
+  }
+}
+
+function extractWords(tc, vp, scale) {
+  // PDF.jsのtransformを使って正確な座標を計算
+  const words = [];
+  for (const item of tc.items) {
+    if (!item.str.trim()) continue;
+    // item.transformはPDF座標系、vp.transformでcanvas座標に変換
+    const t = pdfjsLib.Util.transform(vp.transform, item.transform);
+    // t = [scaleX, skewY, skewX, scaleY, translateX, translateY]
+    const x = t[4];
+    const y = t[5];
+    const itemH = Math.sqrt(t[1]*t[1] + t[3]*t[3]); // 行高さ
+    const itemW = item.width * scale;
+
+    // スペース区切りでトークン化し、各トークンのおおよその座標を計算
+    const tokens = item.str.split(/(\s+)/);
+    const charW = itemW / Math.max(item.str.length, 1);
+    let offsetX = 0;
+    for (const tok of tokens) {
+      if (!tok.trim()) { offsetX += tok.length * charW; continue; }
+      const tokW = tok.length * charW;
+      const clean = tok.replace(/[^a-zA-Z'-]/g, '');
+      if (clean.length >= 2) {
+        words.push({
+          word: clean,
+          raw: tok,
+          x: x + offsetX,
+          y: y - itemH,    // PDF座標はy軸が下から上なので反転
+          w: tokW,
+          h: itemH
+        });
+      }
+      offsetX += tokW;
+    }
+  }
+  return words;
+}
+
+async function loadImage(file) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      pages.push({ dataUrl: e.target.result, label: file.name, words: [], hasText: false });
+      resolve();
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function showReader() {
+  document.getElementById('upload-pane').style.display = 'none';
+  document.getElementById('reader-pane').style.display = 'flex';
+  document.getElementById('vocab-pane').style.display = 'flex';
+  document.getElementById('reset-btn').style.display = 'inline-block';
+  renderPage(0);
+}
+
+function renderPage(idx) {
+  currentPage = idx;
+  document.getElementById('page-info').textContent = `${idx+1} / ${pages.length}`;
+  document.getElementById('prev-btn').disabled = idx === 0;
+  document.getElementById('next-btn').disabled = idx === pages.length - 1;
+  closePopup();
+  const canvas = document.getElementById('page-canvas');
+  const img = new Image();
+  img.onload = () => {
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    canvas.getContext('2d').drawImage(img, 0, 0);
+  };
+  img.src = pages[idx].dataUrl;
+}
+
+function changePage(dir) {
+  const next = currentPage + dir;
+  if (next >= 0 && next < pages.length) renderPage(next);
+}
+
+// ── Click handler ──
+document.getElementById('canvas-wrap').addEventListener('click', e => {
+  if (document.getElementById('word-popup').contains(e.target)) return;
+  const canvas = document.getElementById('page-canvas');
+  const rect = canvas.getBoundingClientRect();
+  if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) {
+    closePopup(); return;
+  }
+
+  // canvas上のクリック座標（canvasのネイティブピクセル座標）
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const cx = (e.clientX - rect.left) * scaleX;
+  const cy = (e.clientY - rect.top) * scaleY;
+
+  _popupX = e.clientX;
+  _popupY = e.clientY;
+
+  const pg = pages[currentPage];
+
+  // テキストPDF: 単語座標から最近傍を特定
+  if (pg.hasText && pg.words.length > 0) {
+    const best = findNearestWord(pg.words, cx, cy);
+    if (best) {
+      highlightWord(best, rect, canvas);
+      showPopup();
+      lookupByText(best.word, getContext(pg.words, best));
+      return;
+    }
+  }
+
+  // スキャン・画像: クリック周辺をクロップしてAIに送る
+  const cropW = 420, cropH = 160;
+  const cropX = Math.max(0, cx - cropW/2);
+  const cropY = Math.max(0, cy - cropH/2);
+  const cw = Math.min(canvas.width - cropX, cropW);
+  const ch = Math.min(canvas.height - cropY, cropH);
+  const crop = document.createElement('canvas');
+  crop.width = cw; crop.height = ch;
+  crop.getContext('2d').drawImage(canvas, cropX, cropY, cw, ch, 0, 0, cw, ch);
+  showPopup();
+  lookupByImage(crop.toDataURL('image/jpeg', 0.92));
+});
+
+function findNearestWord(words, cx, cy) {
+  let best = null, bestDist = Infinity;
+  for (const w of words) {
+    // 単語のバウンディングボックスの中心との距離
+    const wcx = w.x + w.w / 2;
+    const wcy = w.y + w.h / 2;
+    const dist = Math.hypot(cx - wcx, cy - wcy);
+    if (dist < bestDist) { bestDist = dist; best = w; }
+  }
+  // 遠すぎる場合は無効（行高さの3倍以内）
+  return (best && bestDist < best.h * 4) ? best : null;
+}
+
+function getContext(words, target) {
+  const idx = words.indexOf(target);
+  return words.slice(Math.max(0, idx-5), idx+6).map(w => w.word).join(' ');
+}
+
+function highlightWord(w, canvasRect, canvas) {
+  // クリックした単語を一瞬ハイライト
+  const ctx = canvas.getContext('2d');
+  const scaleX = canvasRect.width / canvas.width;
+  const scaleY = canvasRect.height / canvas.height;
+  ctx.save();
+  ctx.fillStyle = 'rgba(200,169,110,0.35)';
+  ctx.fillRect(w.x, w.y, w.w, w.h);
+  ctx.restore();
+  setTimeout(() => {
+    const img = new Image();
+    img.onload = () => ctx.drawImage(img, 0, 0);
+    img.src = pages[currentPage].dataUrl;
+  }, 600);
+}
+
+// ── Popup ──
+function showPopup() {
+  currentWord = ''; currentDef = ''; currentEx = '';
+  document.getElementById('pw').textContent = '';
+  document.getElementById('pp').textContent = '';
+  document.getElementById('pbody').innerHTML = '<div class="pload"><div class="spinner"></div>調べています...</div>';
+  document.getElementById('pa').style.display = 'none';
+  const popup = document.getElementById('word-popup');
+  popup.style.display = 'block';
+  positionPopup();
+}
+
+function positionPopup() {
+  const popup = document.getElementById('word-popup');
+  const pw = popup.offsetWidth, ph = popup.offsetHeight, m = 10;
+  let left = _popupX + 14, top = _popupY - ph / 2;
+  if (left + pw > window.innerWidth - m) left = _popupX - pw - 14;
+  left = Math.max(m, Math.min(left, window.innerWidth - pw - m));
+  top  = Math.max(m, Math.min(top,  window.innerHeight - ph - m));
+  popup.style.left = left + 'px';
+  popup.style.top  = top  + 'px';
+}
+
+function closePopup() { document.getElementById('word-popup').style.display = 'none'; }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closePopup(); });
+document.addEventListener('mousedown', e => {
+  if (!document.getElementById('word-popup').contains(e.target) &&
+      !e.target.closest('#canvas-wrap')) closePopup();
+});
+
+// Draggable popup
+(function() {
+  const popup = document.getElementById('word-popup');
+  let drag = false, sx = 0, sy = 0, ol = 0, ot = 0;
+  popup.addEventListener('mousedown', e => {
+    if (e.target.closest('.pa') || e.target.closest('#pbody')) return;
+    drag = true; sx = e.clientX; sy = e.clientY;
+    ol = parseInt(popup.style.left)||0; ot = parseInt(popup.style.top)||0;
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', e => {
+    if (!drag) return;
+    const m = 8;
+    popup.style.left = Math.max(m, Math.min(ol+e.clientX-sx, window.innerWidth-popup.offsetWidth-m))+'px';
+    popup.style.top  = Math.max(m, Math.min(ot+e.clientY-sy, window.innerHeight-popup.offsetHeight-m))+'px';
+  });
+  document.addEventListener('mouseup', () => { drag = false; });
+})();
+
+// ── API ──
+const DICT_SYSTEM = `You are an English dictionary for a Japanese reader. Respond ONLY in valid JSON (no markdown, no preamble):
+{"word":"string","phonetic":"IPA string","meanings":[{"sense":"短い日本語ラベル","tag":"一般/IT/医学/法律/etc.","definition":"一文の日本語説明"}],"note":"ニュアンス補足 or null","example":"one English sentence"}
+Include 2-5 meanings covering all major senses.`;
+
+function callAPI(payload, onSuccess) {
+  const key = getApiKey();
+  if (!key) { showError('APIキーを入力して「保存」を押してください'); return; }
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', API, true);
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.setRequestHeader('anthropic-version', '2023-06-01');
+  xhr.setRequestHeader('anthropic-dangerous-direct-browser-access', 'true');
+  xhr.setRequestHeader('x-api-key', key);
+  xhr.onload = () => {
+    try {
+      const data = JSON.parse(xhr.responseText);
+      if (data.error) { showError(data.error.message || 'APIエラー'); return; }
+      onSuccess(data);
+    } catch { showError('レスポンス解析エラー'); }
+  };
+  xhr.onerror = () => showError('通信エラー');
+  xhr.send(JSON.stringify(payload));
+}
+
+function showError(msg) {
+  document.getElementById('pbody').innerHTML = `<div class="pload" style="color:var(--danger)">${msg}</div>`;
+  document.getElementById('pa').style.display = 'flex';
+}
+
+function lookupByText(word, context) {
+  // キャッシュ確認
+  const cached = vocabList.find(v => v.word.toLowerCase() === word.toLowerCase());
+  if (cached) {
+    currentWord = cached.word; currentDef = cached.definition; currentEx = cached.example;
+    document.getElementById('pw').textContent = currentWord;
+    document.getElementById('pp').textContent = '';
+    document.getElementById('pbody').innerHTML = `<div class="pmdef">${currentDef}</div>${currentEx ? `<div class="pex">${currentEx}</div>` : ''}`;
+    document.getElementById('pa').style.display = 'flex';
+    document.getElementById('save-btn').textContent = '✓ 保存済み';
+    document.getElementById('save-btn').className = 'pbtn saved';
+    requestAnimationFrame(positionPopup);
+    return;
+  }
+  const userMsg = context
+    ? `Clicked word: "${word}"\nContext: "${context}"\nIf the word looks like a line-break fragment (e.g. "in-" part of "indicator"), use context to identify and define the full word.`
+    : `Define: "${word}"`;
+  callAPI({ model:'claude-sonnet-4-20250514', max_tokens:600, system:DICT_SYSTEM, messages:[{role:'user',content:userMsg}] }, renderResult);
+}
+
+function lookupByImage(dataUrl) {
+  callAPI({
+    model:'claude-sonnet-4-20250514', max_tokens:600,
+    system: DICT_SYSTEM + '\nA cropped image is provided. Identify the English word closest to the center and define it.',
+    messages:[{role:'user',content:[
+      {type:'image',source:{type:'base64',media_type:'image/jpeg',data:dataUrl.split(',')[1]}},
+      {type:'text',text:'What English word is at the center? Define it.'}
+    ]}]
+  }, renderResult);
+}
+
+function renderResult(data) {
+  try {
+    const obj = JSON.parse((data.content?.[0]?.text||'{}').replace(/```json|```/g,'').trim());
+    currentWord = obj.word||'';
+    currentDef = (obj.meanings||[]).map(m=>m.definition).join(' / ')||obj.definition||'';
+    currentEx = obj.example||'';
+    document.getElementById('pw').textContent = currentWord;
+    document.getElementById('pp').textContent = obj.phonetic||'';
+    let html = '';
+    (obj.meanings||[]).forEach((m,i) => {
+      html += `<div class="pmeaning"><span class="pmnum">${i+1}</span>${m.sense?`<span class="pmtag domain">${m.sense}</span>`:''
+      }${m.tag?`<span class="pmtag field">${m.tag}</span>`:''}<div class="pmdef">${m.definition}</div></div>`;
+    });
+    if (!obj.meanings?.length && obj.definition) html = `<div class="pmdef">${obj.definition}</div>`;
+    if (obj.note) html += `<div class="pnote">${obj.note}</div>`;
+    if (obj.example) html += `<div class="pex">${obj.example}</div>`;
+    document.getElementById('pbody').innerHTML = html;
+    document.getElementById('pa').style.display = 'flex';
+    const isSaved = vocabList.some(v => v.word.toLowerCase() === currentWord.toLowerCase());
+    const sb = document.getElementById('save-btn');
+    sb.textContent = isSaved ? '✓ 保存済み' : '+ 保存';
+    sb.className = isSaved ? 'pbtn saved' : 'pbtn save';
+    requestAnimationFrame(positionPopup);
+  } catch { showError('レスポンス解析エラー'); }
+}
+
+function saveWord() {
+  if (!currentWord || vocabList.some(v => v.word.toLowerCase() === currentWord.toLowerCase())) return;
+  vocabList.push({ word: currentWord, definition: currentDef, example: currentEx });
+  updateVocabUI();
+  document.getElementById('save-btn').textContent = '✓ 保存済み';
+  document.getElementById('save-btn').className = 'pbtn saved';
+}
+
+function updateVocabUI() {
+  const list = document.getElementById('vocab-list');
+  document.getElementById('count').textContent = vocabList.length;
+  document.getElementById('csv-btn').disabled = vocabList.length === 0;
+  document.getElementById('vempty').style.display = vocabList.length ? 'none' : 'block';
+  list.querySelectorAll('.vi').forEach(el => el.remove());
+  vocabList.forEach((v,i) => {
+    const item = document.createElement('div'); item.className = 'vi';
+    item.innerHTML = `<div style="flex:1;min-width:0"><div class="viw">${v.word}</div><div class="vid">${v.definition}</div></div><button class="vdel" onclick="removeWord(${i})">×</button>`;
+    list.appendChild(item);
+  });
+}
+
+function removeWord(idx) { vocabList.splice(idx,1); updateVocabUI(); }
+
+function exportCSV() {
+  if (!vocabList.length) return;
+  const rows = [['単語','意味（日本語）','例文'], ...vocabList.map(v=>[v.word,v.definition,v.example])];
+  const csv = rows.map(r=>r.map(c=>`"${(c||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'}));
+  a.download = 'vocab_list.csv'; a.click();
+}
+
+function setProgress(msg, pct) {
+  document.getElementById('prog-wrap').style.display = 'block';
+  document.getElementById('prog-label').textContent = msg;
+  document.getElementById('prog-fill').style.width = pct + '%';
+}
+
+function resetApp() {
+  pages=[]; currentPage=0; vocabList=[];
+  document.getElementById('upload-pane').style.display='flex';
+  document.getElementById('reader-pane').style.display='none';
+  document.getElementById('vocab-pane').style.display='none';
+  document.getElementById('reset-btn').style.display='none';
+  document.getElementById('prog-wrap').style.display='none';
+  document.getElementById('count').textContent='0';
+  document.getElementById('csv-btn').disabled=true;
+  document.getElementById('file-input').value='';
+  closePopup(); updateVocabUI();
+}
+</script>
+</body>
+</html>
