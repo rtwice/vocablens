@@ -56,7 +56,8 @@ header{display:flex;align-items:center;justify-content:space-between;padding:.65
 .page-nav button:hover:not(:disabled){border-color:var(--accent);color:var(--accent);}
 .page-nav button:disabled{opacity:.3;cursor:not-allowed;}
 .hint{margin-left:auto;color:var(--text3);font-size:11px;}
-#canvas-wrap{flex:1;overflow:auto;background:#111;padding:1.5rem;display:flex;justify-content:center;align-items:flex-start;cursor:crosshair;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
+#canvas-wrap{flex:1;overflow:auto;background:#111;padding:1.5rem;display:flex;justify-content:center;align-items:flex-start;cursor:crosshair;touch-action:pan-x pan-y;-webkit-tap-highlight-color:transparent;}
+#canvas-scaler{display:inline-block;transform-origin:top center;transition:transform .15s;}
 #page-canvas{display:block;box-shadow:0 4px 32px rgba(0,0,0,.6);border-radius:2px;}
 
 /* Highlight overlay */
@@ -135,10 +136,17 @@ header{display:flex;align-items:center;justify-content:space-between;padding:.65
       <button id="prev-btn" onclick="changePage(-1)" disabled>← prev</button>
       <span id="page-info">1 / 1</span>
       <button id="next-btn" onclick="changePage(1)" disabled>next →</button>
+      <span style="color:var(--text3);font-size:11px;margin-left:4px;">zoom</span>
+      <input type="range" id="zoom-slider" min="30" max="200" value="100" step="5"
+        style="width:90px;accent-color:var(--accent);"
+        oninput="setZoom(this.value)">
+      <span id="zoom-label" style="font-size:11px;color:var(--text2);min-width:32px;">100%</span>
       <span class="hint">単語をクリック → 意味表示</span>
     </div>
     <div id="canvas-wrap">
-      <canvas id="page-canvas"></canvas>
+      <div id="canvas-scaler">
+        <canvas id="page-canvas"></canvas>
+      </div>
     </div>
   </div>
 
@@ -603,8 +611,47 @@ function setProgress(msg, pct) {
   document.getElementById('prog-fill').style.width = pct + '%';
 }
 
+let _zoom = 100;
+
+function setZoom(val) {
+  _zoom = parseInt(val);
+  document.getElementById('canvas-scaler').style.transform = `scale(${_zoom/100})`;
+  document.getElementById('zoom-label').textContent = _zoom + '%';
+}
+
+// ── Pinch zoom ──
+(function() {
+  const wrap = document.getElementById('canvas-wrap');
+  let initDist = 0, initZoom = 100;
+
+  wrap.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) {
+      initDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      initZoom = _zoom;
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  wrap.addEventListener('touchmove', e => {
+    if (e.touches.length === 2) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const newZoom = Math.round(Math.max(30, Math.min(200, initZoom * dist / initDist)));
+      document.getElementById('zoom-slider').value = newZoom;
+      setZoom(newZoom);
+      e.preventDefault();
+    }
+  }, { passive: false });
+})();
+
 function resetApp() {
   pages=[]; currentPage=0; vocabList=[];
+  setZoom(100); document.getElementById('zoom-slider').value = 100;
   document.getElementById('upload-pane').style.display='flex';
   document.getElementById('reader-pane').style.display='none';
   document.getElementById('vocab-pane').style.display='none';
