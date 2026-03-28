@@ -329,7 +329,7 @@ function renderPage(idx) {
 function applyZoomToCanvas() {
   var canvas = document.getElementById('page-canvas');
   if (canvas.width > 0) {
-    canvas.style.width = Math.round(canvas.width * zoomLevel / 200) + 'px';
+    canvas.style.width = Math.round(canvas.width * zoomLevel / 100) + 'px';
     canvas.style.height = 'auto';
   }
 }
@@ -342,10 +342,9 @@ function changePage(dir) {
 function setZoom(val) {
   zoomLevel = val;
   document.getElementById('zoom-label').textContent = val + '%';
-  // CSSのwidthを変えるだけ - getBoundingClientRectが正確になる
   var canvas = document.getElementById('page-canvas');
   if (canvas.width > 0) {
-    canvas.style.width = Math.round(canvas.width * val / 200) + 'px';
+    canvas.style.width = Math.round(canvas.width * val / 100) + 'px';
     canvas.style.height = 'auto';
   }
 }
