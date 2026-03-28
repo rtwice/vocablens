@@ -271,22 +271,20 @@ function extractWords(tc, vp, scale) {
     // [scaleX, skewY, skewX, scaleY, translateX, translateY]
     // vp.transform maps PDF user space -> canvas pixel space
     // We need to apply vp.transform to item.transform to get canvas coords.
+    // vp.transform already includes the scale factor, so t[] values are in canvas pixels
     var t = pdfjsLib.Util.transform(vp.transform, item.transform);
 
-    // t[4], t[5] = position in canvas pixels
-    // In PDF, Y increases upward. PDF.js viewport flips Y so canvas Y increases downward.
-    // t[5] = Y coordinate of the text BOTTOM (descender line) in canvas pixels
-    var x = t[4];
-    var y = t[5];  // this is the BOTTOM of the text in canvas coords
+    var x = t[4];   // left edge of text in canvas pixels
+    var y = t[5];   // baseline Y in canvas pixels (PDF Y-flip already applied by vp.transform)
 
-    // Font size = the scale factor applied to the Y axis
-    // For a non-rotated text: fontSizePx = |t[3]| (the scaleY in canvas space)
+    // Font height in canvas pixels
+    // t[3] already includes the scale factor from vp.transform
     var fontSizePx = Math.abs(t[3]);
 
-    // item.width is already in canvas pixels after the transform
+    // item.width is in PDF user space units - multiply by scale to get canvas pixels
     var itemW = item.width * scale;
 
-    // Text box: top = y - fontSizePx, height = fontSizePx
+    // top of text = baseline - fontHeight
     var top = y - fontSizePx;
     var h = fontSizePx;
 
@@ -305,6 +303,12 @@ function extractWords(tc, vp, scale) {
     }
   }
 
+  // Debug log
+  if (words.length > 0) {
+    console.log('[VL] vp.transform:', JSON.stringify(vp.transform));
+    console.log('[VL] first item.transform:', JSON.stringify(tc.items[0] ? tc.items[0].transform : null));
+    console.log('[VL] first 3 words:', JSON.stringify(words.slice(0,3).map(function(w){ return {word:w.word, x:Math.round(w.x), y:Math.round(w.y), w:Math.round(w.w), h:Math.round(w.h)}; })));
+  }
   return words;
 }
 
