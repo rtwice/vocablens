@@ -187,6 +187,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:.65
 
 <script>
 var API_URL = 'https://api.anthropic.com/v1/messages';
+console.log('[VocabLens] version: 2026-03-28-v1');
 var DICT_SYSTEM = 'You are an English dictionary for a Japanese reader. Respond ONLY in valid JSON (no markdown, no preamble): {"word":"string","phonetic":"IPA","meanings":[{"sense":"短い日本語ラベル","tag":"一般/IT/医学/etc.","definition":"一文の日本語説明"}],"note":"補足 or null","example":"one English sentence"}. Include 2-5 meanings.';
 
 var pages = [], currentPage = 0, vocabList = [];
