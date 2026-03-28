@@ -44,7 +44,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:.65
 .page-nav button:disabled{opacity:.3;}
 .hint{margin-left:auto;color:var(--text3);font-size:11px;}
 #canvas-wrap{flex:1;overflow:auto;background:#111;padding:1.5rem;display:flex;justify-content:center;align-items:flex-start;}
-#canvas-scaler{display:inline-block;transform-origin:top center;transition:transform .15s;}
+#canvas-scaler{display:inline-block;}
 #page-canvas{display:block;box-shadow:0 4px 32px rgba(0,0,0,.6);border-radius:2px;cursor:crosshair;}
 #word-popup{position:fixed;z-index:9999;background:#1c1c1c;border:1px solid #383838;border-radius:12px;padding:1rem 1.1rem;width:320px;max-width:calc(100vw - 24px);max-height:calc(100vh - 32px);overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,.75);display:none;}
 .pw{font-family:'Lora',serif;font-size:20px;font-weight:600;color:var(--accent);margin-bottom:2px;}
@@ -318,9 +318,20 @@ function renderPage(idx) {
   img.onload = function() {
     canvas.width = img.naturalWidth;
     canvas.height = img.naturalHeight;
+    canvas.style.width = '';
+    canvas.style.height = '';
     canvas.getContext('2d').drawImage(img, 0, 0);
+    requestAnimationFrame(applyZoomToCanvas);
   };
   img.src = pages[idx].dataUrl;
+}
+
+function applyZoomToCanvas() {
+  var canvas = document.getElementById('page-canvas');
+  if (canvas.width > 0) {
+    canvas.style.width = Math.round(canvas.width * zoomLevel / 200) + 'px';
+    canvas.style.height = 'auto';
+  }
 }
 
 function changePage(dir) {
@@ -330,8 +341,13 @@ function changePage(dir) {
 
 function setZoom(val) {
   zoomLevel = val;
-  document.getElementById('canvas-scaler').style.transform = 'scale(' + val/100 + ')';
   document.getElementById('zoom-label').textContent = val + '%';
+  // CSSのwidthを変えるだけ - getBoundingClientRectが正確になる
+  var canvas = document.getElementById('page-canvas');
+  if (canvas.width > 0) {
+    canvas.style.width = Math.round(canvas.width * val / 200) + 'px';
+    canvas.style.height = 'auto';
+  }
 }
 
 // ── Click handler ──
@@ -651,6 +667,7 @@ function setProgress(msg, pct) {
 function resetApp() {
   pages=[]; currentPage=0; vocabList=[];
   setZoom(100); document.getElementById('zoom-slider').value = 100;
+  document.getElementById('page-canvas').style.width = '';
   document.getElementById('upload-pane').style.display='flex';
   document.getElementById('reader-pane').style.display='none';
   document.getElementById('vocab-pane').style.display='none';
