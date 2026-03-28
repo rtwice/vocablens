@@ -267,25 +267,28 @@ function extractWords(tc, vp, scale) {
     var item = tc.items[i];
     if (!item.str.trim()) continue;
 
-    // PDF.js transforms item.transform from PDF user space to canvas pixel space.
-    // After transform: t[4]=x, t[5]=y where y is the BASELINE in canvas coords
-    // (canvas coords: top=0, increases downward).
-    // vp.transform already handles the PDF->canvas Y flip.
+    // item.transform is a 6-element matrix in PDF user space:
+    // [scaleX, skewY, skewX, scaleY, translateX, translateY]
+    // vp.transform maps PDF user space -> canvas pixel space
+    // We need to apply vp.transform to item.transform to get canvas coords.
     var t = pdfjsLib.Util.transform(vp.transform, item.transform);
 
-    var baseX = t[4];
-    var baseY = t[5]; // baseline y in canvas pixels (already flipped)
+    // t[4], t[5] = position in canvas pixels
+    // In PDF, Y increases upward. PDF.js viewport flips Y so canvas Y increases downward.
+    // t[5] = Y coordinate of the text BOTTOM (descender line) in canvas pixels
+    var x = t[4];
+    var y = t[5];  // this is the BOTTOM of the text in canvas coords
 
-    // Font height: use item.height (in PDF user space) * scale
-    // item.height is the ascent+descent height of the font
-    var fontH = (item.height || Math.abs(t[3])) * scale;
+    // Font size = the scale factor applied to the Y axis
+    // For a non-rotated text: fontSizePx = |t[3]| (the scaleY in canvas space)
+    var fontSizePx = Math.abs(t[3]);
 
-    // item.width in PDF user space * scale = canvas pixels
+    // item.width is already in canvas pixels after the transform
     var itemW = item.width * scale;
 
-    // In canvas coords, text top = baseline - ascent ≈ baseline - fontH*0.8
-    // (baseline is near the bottom of the glyph, not the very bottom)
-    var top = baseY - fontH * 0.85;
+    // Text box: top = y - fontSizePx, height = fontSizePx
+    var top = y - fontSizePx;
+    var h = fontSizePx;
 
     var tokens = item.str.split(/\s+/);
     var charW = itemW / Math.max(item.str.length, 1);
@@ -296,16 +299,18 @@ function extractWords(tc, vp, scale) {
       var tokW = tok.length * charW;
       var clean = tok.replace(/[^a-zA-Z'-]/g, '');
       if (clean.length >= 2) {
-        words.push({
-          word: clean, raw: tok,
-          x: baseX + offsetX,
-          y: top,
-          w: tokW,
-          h: fontH
-        });
+        words.push({ word: clean, raw: tok, x: x + offsetX, y: top, w: tokW, h: h });
       }
       offsetX += tokW;
     }
+  }
+
+  // Debug: log first 3 words to console
+  if (words.length > 0) {
+    console.log('[VocabLens] Sample words:', words.slice(0,3).map(function(w){
+      return w.word + ' x=' + Math.round(w.x) + ' y=' + Math.round(w.y) + ' w=' + Math.round(w.w) + ' h=' + Math.round(w.h);
+    }));
+    console.log('[VocabLens] Canvas size will be: vp.width=' + vp.width + ' vp.height=' + vp.height);
   }
   return words;
 }
