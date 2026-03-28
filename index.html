@@ -398,8 +398,7 @@ function handleWordAt(cx, cy, canvas) {
     if (best) {
       highlightWord(best, canvas);
       showPopup();
-      var ctx = getWordContext(pg.words, best);
-      lookupByText(best.word, ctx);
+      lookupByText(best.word);
       return;
     }
   }
@@ -605,7 +604,7 @@ function showError(msg) {
   document.getElementById('pa').style.display = 'flex';
 }
 
-function lookupByText(word, context) {
+function lookupByText(word) {
   var cached = vocabList.filter(function(v){ return v.word.toLowerCase() === word.toLowerCase(); })[0];
   if (cached) {
     currentWord = cached.word; currentDef = cached.definition; currentEx = cached.example;
@@ -618,10 +617,7 @@ function lookupByText(word, context) {
     requestAnimationFrame(positionPopup);
     return;
   }
-  var userMsg = context
-    ? 'Clicked word: "' + word + '"\nContext: "' + context + '"\nIf the word is a line-break fragment, reconstruct and define the full word.'
-    : 'Define: "' + word + '"';
-  callAPI({ model:'claude-sonnet-4-20250514', max_tokens:600, system:DICT_SYSTEM, messages:[{role:'user',content:userMsg}] }, renderResult);
+  callAPI({ model:'claude-sonnet-4-20250514', max_tokens:600, system:DICT_SYSTEM, messages:[{role:'user',content:'Define: "' + word + '"'}] }, renderResult);
 }
 
 function lookupByImage(dataUrl) {
