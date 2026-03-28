@@ -267,22 +267,25 @@ function extractWords(tc, vp, scale) {
     var item = tc.items[i];
     if (!item.str.trim()) continue;
 
-    // item.transform = [scaleX, skewY, skewX, scaleY, x, y] in PDF user space
-    // vp.transform converts PDF space -> canvas pixel space
+    // PDF.js transforms item.transform from PDF user space to canvas pixel space.
+    // After transform: t[4]=x, t[5]=y where y is the BASELINE in canvas coords
+    // (canvas coords: top=0, increases downward).
+    // vp.transform already handles the PDF->canvas Y flip.
     var t = pdfjsLib.Util.transform(vp.transform, item.transform);
 
-    // t[4],t[5] = canvas position of the text baseline (bottom-left of text)
     var baseX = t[4];
-    var baseY = t[5];
+    var baseY = t[5]; // baseline y in canvas pixels (already flipped)
 
-    // Font size in canvas pixels = magnitude of the Y scale component
-    var fontH = Math.sqrt(t[1]*t[1] + t[3]*t[3]);
+    // Font height: use item.height (in PDF user space) * scale
+    // item.height is the ascent+descent height of the font
+    var fontH = (item.height || Math.abs(t[3])) * scale;
 
-    // item.width is in PDF user space; multiply by scale to get canvas pixels
+    // item.width in PDF user space * scale = canvas pixels
     var itemW = item.width * scale;
 
-    // Top of the text box = baseY - fontH (PDF y-axis points up, canvas points down)
-    var top = baseY - fontH;
+    // In canvas coords, text top = baseline - ascent ≈ baseline - fontH*0.8
+    // (baseline is near the bottom of the glyph, not the very bottom)
+    var top = baseY - fontH * 0.85;
 
     var tokens = item.str.split(/\s+/);
     var charW = itemW / Math.max(item.str.length, 1);
@@ -409,14 +412,33 @@ function handleWordAt(cx, cy, canvas) {
 }
 
 function findNearestWord(words, cx, cy) {
-  var best = null, bestDist = Infinity;
+  if (!words.length) return null;
+
+  // Step1: 最も近いY座標の行を特定（行の中心Y との距離）
+  var bestLineY = null, bestLineDist = Infinity;
   for (var i = 0; i < words.length; i++) {
-    var w = words[i];
-    var wcx = w.x + w.w/2, wcy = w.y + w.h/2;
-    var dist = Math.sqrt((cx-wcx)*(cx-wcx) + (cy-wcy)*(cy-wcy));
-    if (dist < bestDist) { bestDist = dist; best = w; }
+    var wcy = words[i].y + words[i].h / 2;
+    var dy = Math.abs(cy - wcy);
+    if (dy < bestLineDist) { bestLineDist = dy; bestLineY = wcy; }
   }
-  return (best && bestDist < best.h * 4) ? best : null;
+
+  // Step2: 同じ行（Y中心が近い）の単語だけ絞り込む
+  var lineWords = [];
+  for (var i = 0; i < words.length; i++) {
+    var wcy = words[i].y + words[i].h / 2;
+    if (Math.abs(wcy - bestLineY) < words[i].h * 0.6) {
+      lineWords.push(words[i]);
+    }
+  }
+
+  // Step3: その行の中でX座標が最も近い単語を返す
+  var best = null, bestDist = Infinity;
+  for (var i = 0; i < lineWords.length; i++) {
+    var wcx = lineWords[i].x + lineWords[i].w / 2;
+    var dx = Math.abs(cx - wcx);
+    if (dx < bestDist) { bestDist = dx; best = lineWords[i]; }
+  }
+  return best;
 }
 
 function getWordContext(words, target) {
