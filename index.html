@@ -173,6 +173,9 @@ header{display:flex;align-items:center;justify-content:space-between;padding:.65
 
 <!-- Definition popup -->
 <div id="word-popup">
+  <div id="popup-handle" style="height:20px;margin:-1rem -1.1rem .5rem;border-radius:12px 12px 0 0;display:flex;align-items:center;justify-content:center;cursor:grab;flex-shrink:0;">
+    <div style="width:36px;height:4px;background:var(--border);border-radius:2px;"></div>
+  </div>
   <div class="pw" id="pw"></div>
   <div class="pp" id="pp"></div>
   <div id="pbody"><div class="pload"><div class="spinner"></div>調べています...</div></div>
@@ -656,20 +659,39 @@ function initTouch() {
 // ── Popup drag (mouse) ──
 function initPopupDrag() {
   var popup = document.getElementById('word-popup');
+  var handle = document.getElementById('popup-handle');
   var drag=false, sx=0, sy=0, ol=0, ot=0;
-  popup.addEventListener('mousedown', function(e){
-    if (e.target.closest('.pa')||e.target.closest('#pbody')) return;
-    drag=true; sx=e.clientX; sy=e.clientY;
+
+  function startDrag(x, y) {
+    drag=true; sx=x; sy=y;
     ol=parseInt(popup.style.left)||0; ot=parseInt(popup.style.top)||0;
-    e.preventDefault();
-  });
-  document.addEventListener('mousemove', function(e){
+  }
+  function moveDrag(x, y) {
     if (!drag) return;
     var m=8;
-    popup.style.left=Math.max(m,Math.min(ol+e.clientX-sx,window.innerWidth-popup.offsetWidth-m))+'px';
-    popup.style.top =Math.max(m,Math.min(ot+e.clientY-sy,window.innerHeight-popup.offsetHeight-m))+'px';
+    popup.style.left=Math.max(m,Math.min(ol+x-sx,window.innerWidth-popup.offsetWidth-m))+'px';
+    popup.style.top =Math.max(m,Math.min(ot+y-sy,window.innerHeight-popup.offsetHeight-m))+'px';
+  }
+
+  // Mouse
+  popup.addEventListener('mousedown', function(e){
+    if (e.target.closest('.pa')||e.target.closest('#pbody')) return;
+    startDrag(e.clientX, e.clientY); e.preventDefault();
   });
+  document.addEventListener('mousemove', function(e){ moveDrag(e.clientX, e.clientY); });
   document.addEventListener('mouseup', function(){ drag=false; });
+
+  // Touch - handle only to avoid blocking buttons
+  handle.addEventListener('touchstart', function(e){
+    if (e.touches.length !== 1) return;
+    startDrag(e.touches[0].clientX, e.touches[0].clientY);
+    e.stopPropagation();
+  }, {passive:true});
+  document.addEventListener('touchmove', function(e){
+    if (!drag) return;
+    moveDrag(e.touches[0].clientX, e.touches[0].clientY);
+  }, {passive:true});
+  document.addEventListener('touchend', function(){ drag=false; }, {passive:true});
 }
 
 function setProgress(msg, pct) {
