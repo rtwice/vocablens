@@ -640,34 +640,36 @@ function setZoom(val) {
   document.getElementById('zoom-label').textContent = _zoom + '%';
 }
 
-// ── Pinch zoom ──
+// ── Pinch zoom (passive only - no preventDefault to avoid blocking iOS UI) ──
 (function() {
   const wrap = document.getElementById('canvas-wrap');
-  let initDist = 0, initZoom = 100;
+  let initDist = 0, initZoom = 100, pinching = false;
 
   wrap.addEventListener('touchstart', e => {
     if (e.touches.length === 2) {
+      pinching = true;
       initDist = Math.hypot(
         e.touches[0].clientX - e.touches[1].clientX,
         e.touches[0].clientY - e.touches[1].clientY
       );
       initZoom = _zoom;
-      e.preventDefault();
     }
-  }, { passive: false });
+  }, { passive: true });
 
   wrap.addEventListener('touchmove', e => {
-    if (e.touches.length === 2) {
-      const dist = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
-      );
-      const newZoom = Math.round(Math.max(30, Math.min(200, initZoom * dist / initDist)));
-      document.getElementById('zoom-slider').value = newZoom;
-      setZoom(newZoom);
-      e.preventDefault();
-    }
-  }, { passive: false });
+    if (!pinching || e.touches.length !== 2) return;
+    const dist = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    );
+    const newZoom = Math.round(Math.max(30, Math.min(200, initZoom * dist / initDist)));
+    document.getElementById('zoom-slider').value = newZoom;
+    setZoom(newZoom);
+  }, { passive: true });
+
+  wrap.addEventListener('touchend', e => {
+    if (e.touches.length < 2) pinching = false;
+  }, { passive: true });
 })();
 
 function resetApp() {
