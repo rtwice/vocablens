@@ -390,7 +390,28 @@ function onCanvasClick(e) {
 
 function handleWordAt(cx, cy, canvas) {
   var pg = pages[currentPage];
+
+  // DEBUG: 赤丸でクリック位置を表示
+  var dbgCtx = canvas.getContext('2d');
+  dbgCtx.save();
+  dbgCtx.strokeStyle = 'red';
+  dbgCtx.lineWidth = 3;
+  dbgCtx.beginPath();
+  dbgCtx.arc(cx, cy, 10, 0, Math.PI*2);
+  dbgCtx.stroke();
+  dbgCtx.restore();
+
   if (pg.hasText && pg.words.length > 0) {
+    // DEBUG: 最初の20単語に青枠を描画
+    dbgCtx.save();
+    dbgCtx.strokeStyle = 'rgba(0,100,255,0.6)';
+    dbgCtx.lineWidth = 1;
+    for (var di = 0; di < Math.min(pg.words.length, 80); di++) {
+      var dw = pg.words[di];
+      dbgCtx.strokeRect(dw.x, dw.y, dw.w, dw.h);
+    }
+    dbgCtx.restore();
+
     var best = findNearestWord(pg.words, cx, cy);
     if (best) {
       highlightWord(best, canvas);
