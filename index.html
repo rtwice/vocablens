@@ -25,6 +25,8 @@ header{display:flex;align-items:center;justify-content:space-between;padding:.65
 .btn.primary{background:var(--accent);border-color:var(--accent);color:#0f0f0f;font-weight:500;}
 .btn:disabled{opacity:.3;cursor:not-allowed;}
 .main{display:flex;flex:1;overflow:hidden;}
+
+/* Upload */
 #upload-pane{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;}
 .drop-zone{width:100%;max-width:440px;border:1.5px dashed var(--border);border-radius:16px;padding:3rem 2rem;text-align:center;cursor:pointer;background:var(--surface);transition:all .2s;}
 .drop-zone:hover,.drop-zone.dragover{border-color:var(--accent);background:#1c1810;}
@@ -33,11 +35,12 @@ header{display:flex;align-items:center;justify-content:space-between;padding:.65
 .drop-title{font-size:16px;color:var(--text);margin-bottom:6px;font-family:'Lora',serif;}
 .drop-sub{font-size:12px;color:var(--text2);}
 .drop-sub b{color:var(--accent2);}
-#file-input{display:none;}
 .prog-wrap{width:100%;max-width:440px;margin-top:1.25rem;display:none;}
 .prog-label{font-size:11px;color:var(--text2);margin-bottom:5px;}
 .prog-bar{height:2px;background:var(--border);border-radius:2px;overflow:hidden;}
 .prog-fill{height:100%;background:var(--accent);transition:width .3s;width:0%;}
+
+/* Reader */
 #reader-pane{flex:1;display:none;flex-direction:column;overflow:hidden;border-right:1px solid var(--border);}
 .page-nav{display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;font-size:11px;color:var(--text2);flex-wrap:wrap;}
 .page-nav button{background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text2);padding:3px 9px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:11px;-webkit-appearance:none;}
@@ -46,31 +49,44 @@ header{display:flex;align-items:center;justify-content:space-between;padding:.65
 #canvas-wrap{flex:1;overflow:auto;background:#111;padding:1.5rem;display:flex;justify-content:center;align-items:flex-start;}
 #canvas-scaler{display:inline-block;}
 #page-canvas{display:block;box-shadow:0 4px 32px rgba(0,0,0,.6);border-radius:2px;cursor:crosshair;}
-#word-picker-panel{border-bottom:1px solid var(--border);display:none;flex-direction:column;}
-#word-picker-panel .wp-header{padding:.5rem 1rem;font-size:10px;color:var(--text3);letter-spacing:.1em;border-bottom:1px solid var(--border);}
-.wp-item{padding:7px 1rem;cursor:pointer;font-family:'Lora',serif;font-size:14px;color:var(--text);transition:background .1s;border-bottom:1px solid var(--border);}
-.wp-item:last-child{border-bottom:none;}
-.wp-item:hover,.wp-item:active{background:var(--surface2);}
+
+/* Word picker popup */
+#word-picker{
+  position:fixed;z-index:9000;
+  background:#1c1c1c;border:1px solid #383838;
+  border-radius:10px;padding:4px;
+  min-width:130px;
+  box-shadow:0 8px 28px rgba(0,0,0,.75);
+  display:none;
+  animation:fadeUp .12s ease;
+}
+.wp-item{
+  padding:7px 12px;border-radius:6px;
+  cursor:pointer;font-family:'Lora',serif;
+  font-size:14px;color:var(--text);
+  transition:background .1s;
+  white-space:nowrap;
+}
+.wp-item:hover,.wp-item.active{background:var(--surface2);}
 .wp-item b{color:var(--accent);}
-#word-def-panel{border-bottom:1px solid var(--border);display:none;flex-direction:column;padding:.75rem 1rem;}
-.wd-word{font-family:'Lora',serif;font-size:18px;font-weight:600;color:var(--accent);margin-bottom:2px;}
-.wd-phon{font-size:11px;color:var(--text3);margin-bottom:8px;}
-.wd-meaning{margin-bottom:8px;}
-.wd-num{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 5px;color:var(--accent);margin-bottom:3px;}
-.wd-tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;border-radius:4px;padding:1px 5px;margin-bottom:3px;margin-left:3px;}
-.wd-tag.d{background:#1a2a1a;border:1px solid #2a3a2a;color:#6ec88a;}
-.wd-tag.f{background:#1a1a2a;border:1px solid #2a2a4a;color:var(--accent2);}
-.wd-def{font-family:'Lora',serif;font-size:13px;line-height:1.7;color:var(--text);}
-.wd-ex{font-size:11px;color:var(--text2);font-style:italic;border-left:2px solid var(--border);padding-left:8px;margin-top:4px;line-height:1.6;}
-.wd-note{font-size:11px;color:var(--text2);line-height:1.6;margin-top:6px;padding-top:6px;border-top:1px solid var(--border);}
-.wd-actions{display:flex;gap:6px;justify-content:flex-end;margin-top:8px;}
-.wd-loading{font-size:12px;color:var(--text2);padding:6px 0;display:flex;align-items:center;gap:8px;}
-#word-popup{position:fixed;z-index:9999;background:#1c1c1c;border:1px solid #383838;border-radius:12px;padding:1rem 1.1rem;width:320px;max-width:calc(100vw - 24px);max-height:calc(100vh - 32px);overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,.75);display:none;}
+
+/* Definition popup */
+#word-popup{
+  position:fixed;z-index:9001;
+  background:#1c1c1c;border:1px solid #383838;
+  border-radius:12px;padding:1rem 1.1rem;
+  width:320px;max-width:calc(100vw - 24px);
+  max-height:calc(100vh - 32px);overflow-y:auto;
+  box-shadow:0 12px 40px rgba(0,0,0,.75);
+  display:none;animation:fadeUp .15s ease;
+  user-select:none;
+}
+@keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 .pw{font-family:'Lora',serif;font-size:20px;font-weight:600;color:var(--accent);margin-bottom:2px;}
 .pp{font-size:11px;color:var(--text3);margin-bottom:10px;}
-.pmeaning{margin-bottom:10px;}
-.pmnum{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;color:var(--accent);margin-bottom:4px;}
-.pmtag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;border-radius:4px;padding:1px 6px;margin-bottom:4px;margin-left:4px;}
+.pmeaning{margin-bottom:9px;}
+.pmnum{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;color:var(--accent);margin-bottom:3px;}
+.pmtag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;border-radius:4px;padding:1px 6px;margin-bottom:3px;margin-left:3px;}
 .pmtag.d{background:#1a2a1a;border:1px solid #2a3a2a;color:#6ec88a;}
 .pmtag.f{background:#1a1a2a;border:1px solid #2a2a4a;color:var(--accent2);}
 .pmdef{font-family:'Lora',serif;font-size:14px;line-height:1.75;color:var(--text);}
@@ -83,6 +99,8 @@ header{display:flex;align-items:center;justify-content:space-between;padding:.65
 .pbtn{font-family:'JetBrains Mono',monospace;font-size:11px;padding:6px 14px;border-radius:6px;border:1px solid var(--border);cursor:pointer;background:transparent;color:var(--text2);-webkit-appearance:none;}
 .pbtn.save{background:var(--accent);border-color:var(--accent);color:#0f0f0f;font-weight:500;}
 .pbtn.saved{background:var(--surface2);border-color:var(--success);color:var(--success);}
+
+/* Vocab pane */
 #vocab-pane{width:280px;min-width:240px;display:none;flex-direction:column;background:var(--surface);border-left:1px solid var(--border);}
 .vh{padding:.75rem 1rem;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3);letter-spacing:.1em;}
 #vocab-list{flex:1;overflow-y:auto;}
@@ -90,7 +108,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:.65
 .vi:hover{background:var(--surface2);}
 .viw{font-family:'Lora',serif;font-size:14px;font-weight:600;color:var(--accent);margin-bottom:2px;}
 .vid{font-size:11px;color:var(--text2);line-height:1.5;}
-.vdel{background:none;border:none;color:var(--text3);cursor:pointer;font-size:15px;flex-shrink:0;}
+.vdel{background:none;border:none;color:var(--text3);cursor:pointer;font-size:15px;flex-shrink:0;padding:0;}
 .vempty{padding:2rem 1rem;text-align:center;font-size:11px;color:var(--text3);line-height:2;}
 .vfoot{padding:.75rem 1rem;border-top:1px solid var(--border);}
 ::-webkit-scrollbar{width:3px;}
@@ -106,10 +124,11 @@ header{display:flex;align-items:center;justify-content:space-between;padding:.65
     <button class="btn" id="btn-save-key">保存</button>
     <span id="key-status" style="font-size:11px;display:none;"></span>
     <div class="badge">saved: <b id="count">0</b></div>
-    <button class="btn" id="reset-btn" style="display:none" onclick="resetApp()">← new</button>
-    <button class="btn primary" id="csv-btn" disabled onclick="exportCSV()">CSV</button>
+    <button class="btn" id="reset-btn" style="display:none">← new</button>
+    <button class="btn primary" id="csv-btn" disabled>CSV</button>
   </div>
 </header>
+
 <div class="main">
   <div id="upload-pane">
     <div class="drop-zone" id="drop-zone">
@@ -124,6 +143,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:.65
       <div class="prog-bar"><div class="prog-fill" id="prog-fill"></div></div>
     </div>
   </div>
+
   <div id="reader-pane">
     <div class="page-nav">
       <button id="prev-btn" disabled>← prev</button>
@@ -140,27 +160,18 @@ header{display:flex;align-items:center;justify-content:space-between;padding:.65
       </div>
     </div>
   </div>
+
   <div id="vocab-pane">
     <div class="vh">WORD LIST</div>
-    <!-- 候補リスト -->
-    <div id="word-picker-panel">
-      <div class="wp-header">どの単語？</div>
-    </div>
-    <!-- 意味表示 -->
-    <div id="word-def-panel">
-      <div class="wd-word" id="wd-word"></div>
-      <div class="wd-phon" id="wd-phon"></div>
-      <div id="wd-body"><div class="wd-loading"><div class="spinner"></div>調べています...</div></div>
-      <div class="wd-actions">
-        <button class="pbtn" id="btn-wd-close">閉じる</button>
-        <button class="pbtn save" id="btn-wd-save">+ 保存</button>
-      </div>
-    </div>
-    <!-- 保存済みリスト -->
     <div id="vocab-list"><div class="vempty" id="vempty">単語をクリックして保存しよう</div></div>
-    <div class="vfoot"><button class="btn primary" style="width:100%" onclick="exportCSV()">CSV ダウンロード</button></div>
+    <div class="vfoot"><button class="btn primary" style="width:100%" id="csv-dl-btn">CSV ダウンロード</button></div>
   </div>
 </div>
+
+<!-- Word picker popup -->
+<div id="word-picker"></div>
+
+<!-- Definition popup -->
 <div id="word-popup">
   <div class="pw" id="pw"></div>
   <div class="pp" id="pp"></div>
@@ -172,26 +183,26 @@ header{display:flex;align-items:center;justify-content:space-between;padding:.65
 </div>
 
 <script>
-// ── State ──
 var API_URL = 'https://api.anthropic.com/v1/messages';
+var DICT_SYSTEM = 'You are an English dictionary for a Japanese reader. Respond ONLY in valid JSON (no markdown, no preamble): {"word":"string","phonetic":"IPA","meanings":[{"sense":"短い日本語ラベル","tag":"一般/IT/医学/etc.","definition":"一文の日本語説明"}],"note":"補足 or null","example":"one English sentence"}. Include 2-5 meanings.';
+
 var pages = [], currentPage = 0, vocabList = [];
 var currentWord = '', currentDef = '', currentEx = '';
 var apiKey = '';
-var popupX = 0, popupY = 0;
+var clickX = 0, clickY = 0;
 var zoomLevel = 100;
 
-// ── Init: wire up all buttons with addEventListener (not onclick in HTML) ──
 document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('btn-save-key').addEventListener('click', saveApiKey);
   document.getElementById('btn-close-popup').addEventListener('click', closePopup);
   document.getElementById('btn-save-word').addEventListener('click', saveWord);
-  document.getElementById('btn-wd-close').addEventListener('click', closePicker);
-  document.getElementById('btn-wd-save').addEventListener('click', saveWordFromPanel);
+  document.getElementById('reset-btn').addEventListener('click', resetApp);
+  document.getElementById('csv-btn').addEventListener('click', exportCSV);
+  document.getElementById('csv-dl-btn').addEventListener('click', exportCSV);
   document.getElementById('prev-btn').addEventListener('click', function(){ changePage(-1); });
   document.getElementById('next-btn').addEventListener('click', function(){ changePage(1); });
   document.getElementById('zoom-slider').addEventListener('input', function(){ setZoom(parseInt(this.value)); });
 
-  // Drop zone
   var dz = document.getElementById('drop-zone');
   var fi = document.getElementById('file-input');
   dz.addEventListener('click', function(){ fi.click(); });
@@ -200,50 +211,35 @@ document.addEventListener('DOMContentLoaded', function() {
   dz.addEventListener('drop', function(e){ e.preventDefault(); dz.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
   fi.addEventListener('change', function(){ handleFiles(fi.files); });
 
-  // Canvas click
   document.getElementById('canvas-wrap').addEventListener('click', onCanvasClick);
-
-  // Touch
   initTouch();
-
-  // Popup drag (mouse only)
   initPopupDrag();
 
-  // Close popup on outside click
-  document.addEventListener('mousedown', function(e){
-    var popup = document.getElementById('word-popup');
-    if (popup.style.display !== 'none' && !popup.contains(e.target) && !e.target.closest('#canvas-wrap')) {
-      closePopup();
-    }
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape') { closePopup(); closePicker(); }
   });
-  document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ closePopup(); closePicker(); } });
-document.addEventListener('mousedown', function(e){
-  var picker = document.getElementById('word-picker');
-  if (picker.style.display !== 'none' && !picker.contains(e.target)) closePicker();
-});
+  document.addEventListener('mousedown', function(e) {
+    var picker = document.getElementById('word-picker');
+    var popup  = document.getElementById('word-popup');
+    if (picker.style.display !== 'none' && !picker.contains(e.target)) closePicker();
+    if (popup.style.display  !== 'none' && !popup.contains(e.target) && !e.target.closest('#canvas-wrap')) closePopup();
+  });
 });
 
 // ── API Key ──
 function saveApiKey() {
   var k = document.getElementById('apikey-input').value.trim();
-  if (!k.startsWith('sk-ant-')) {
-    showKeyStatus('sk-ant- で始まるキーを入力してください', 'var(--danger)');
-    return;
-  }
+  if (!k.startsWith('sk-ant-')) { showKeyStatus('sk-ant- で始まるキーを入力してください', 'var(--danger)'); return; }
   apiKey = k;
   showKeyStatus('✓ セット完了', 'var(--success)');
 }
-function getApiKey() {
-  return apiKey || document.getElementById('apikey-input').value.trim();
-}
+function getApiKey() { return apiKey || document.getElementById('apikey-input').value.trim(); }
 function showKeyStatus(msg, color) {
   var el = document.getElementById('key-status');
-  el.style.display = 'inline';
-  el.style.color = color;
-  el.textContent = msg;
+  el.style.display = 'inline'; el.style.color = color; el.textContent = msg;
 }
 
-// ── File handling ──
+// ── Files ──
 function handleFiles(files) {
   if (!files || !files.length) return;
   pages = [];
@@ -251,20 +247,12 @@ function handleFiles(files) {
   var arr = Array.prototype.slice.call(files);
   var idx = 0;
   function next() {
-    if (idx >= arr.length) {
-      setProgress('完了 — ' + pages.length + 'ページ', 100);
-      setTimeout(showReader, 400);
-      return;
-    }
+    if (idx >= arr.length) { setProgress('完了 — ' + pages.length + 'ページ', 100); setTimeout(showReader, 400); return; }
     var f = arr[idx++];
     setProgress('処理中: ' + f.name + ' (' + idx + '/' + arr.length + ')', 10 + (idx/arr.length)*85);
-    if (f.type === 'application/pdf') {
-      loadPDF(f).then(next);
-    } else if (f.type.startsWith('image/')) {
-      loadImage(f).then(next);
-    } else {
-      next();
-    }
+    if (f.type === 'application/pdf') loadPDF(f).then(next);
+    else if (f.type.startsWith('image/')) loadImage(f).then(next);
+    else next();
   }
   next();
 }
@@ -284,13 +272,8 @@ function loadPDF(file) {
             c.width = vp.width; c.height = vp.height;
             return page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise.then(function() {
               return page.getTextContent().then(function(tc) {
-                var words = extractWords(tc, vp, scale);
-                pages.push({
-                  dataUrl: c.toDataURL('image/jpeg', 0.92),
-                  label: file.name + ' p.' + pageNum,
-                  words: words,
-                  hasText: words.length > 5
-                });
+                var words = extractWords(tc, vp);
+                pages.push({ dataUrl: c.toDataURL('image/jpeg', 0.92), label: file.name + ' p.' + pageNum, words: words, hasText: words.length > 5 });
               });
             });
           });
@@ -301,35 +284,17 @@ function loadPDF(file) {
   });
 }
 
-function extractWords(tc, vp, scale) {
+function extractWords(tc, vp) {
   var words = [];
   for (var i = 0; i < tc.items.length; i++) {
     var item = tc.items[i];
     if (!item.str.trim()) continue;
-
-    // item.transform is a 6-element matrix in PDF user space:
-    // [scaleX, skewY, skewX, scaleY, translateX, translateY]
-    // vp.transform maps PDF user space -> canvas pixel space
-    // We need to apply vp.transform to item.transform to get canvas coords.
-    // vp.transform already includes the scale factor, so t[] values are in canvas pixels
     var t = pdfjsLib.Util.transform(vp.transform, item.transform);
-
-    var x = t[4];   // left edge of text in canvas pixels
-    var y = t[5];   // baseline Y in canvas pixels (PDF Y-flip already applied by vp.transform)
-
-    // Font height in canvas pixels
-    // t[3] already includes the scale factor from vp.transform
-    var fontSizePx = Math.abs(t[3]);
-
-    // item.width is in PDF user space - transform it to canvas pixels using scale
-    // vp.transform[0] is the X scale factor (= scale = 2)
+    var x = t[4], y = t[5];
+    var fontH = Math.abs(t[3]);
     var itemW = item.width * Math.abs(vp.transform[0]);
-
-    // top of text = baseline - fontHeight
-    var top = y - fontSizePx;
-    var h = fontSizePx;
-
-    // Split preserving spaces to track exact X offsets
+    var top = y - fontH;
+    // Split keeping whitespace to track offsets accurately
     var tokens = item.str.split(/(\s+)/);
     var charW = itemW / Math.max(item.str.length, 1);
     var offsetX = 0;
@@ -337,27 +302,22 @@ function extractWords(tc, vp, scale) {
       var tok = tokens[j];
       if (!tok) continue;
       var tokW = tok.length * charW;
-      // Only register non-whitespace tokens as words
       if (!/^\s+$/.test(tok)) {
         var clean = tok.replace(/[^a-zA-Z'-]/g, '');
         if (clean.length >= 2) {
-          words.push({ word: clean, raw: tok, x: x + offsetX, y: top, w: tokW, h: h });
+          words.push({ word: clean, raw: tok, x: x + offsetX, y: top, w: tokW, h: fontH });
         }
       }
       offsetX += tokW;
     }
   }
-
   return words;
 }
 
 function loadImage(file) {
   return new Promise(function(resolve) {
     var reader = new FileReader();
-    reader.onload = function(e) {
-      pages.push({ dataUrl: e.target.result, label: file.name, words: [], hasText: false });
-      resolve();
-    };
+    reader.onload = function(e) { pages.push({ dataUrl: e.target.result, label: file.name, words: [], hasText: false }); resolve(); };
     reader.readAsDataURL(file);
   });
 }
@@ -376,26 +336,16 @@ function renderPage(idx) {
   document.getElementById('page-info').textContent = (idx+1) + ' / ' + pages.length;
   document.getElementById('prev-btn').disabled = idx === 0;
   document.getElementById('next-btn').disabled = idx === pages.length - 1;
-  closePopup();
+  closePopup(); closePicker();
   var canvas = document.getElementById('page-canvas');
   var img = new Image();
   img.onload = function() {
-    canvas.width = img.naturalWidth;
-    canvas.height = img.naturalHeight;
-    canvas.style.width = '';
-    canvas.style.height = '';
+    canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+    canvas.style.width = ''; canvas.style.height = '';
     canvas.getContext('2d').drawImage(img, 0, 0);
-    requestAnimationFrame(applyZoomToCanvas);
+    requestAnimationFrame(applyZoom);
   };
   img.src = pages[idx].dataUrl;
-}
-
-function applyZoomToCanvas() {
-  var canvas = document.getElementById('page-canvas');
-  if (canvas.width > 0) {
-    canvas.style.width = Math.round(canvas.width * zoomLevel / 200) + 'px';
-    canvas.style.height = 'auto';
-  }
 }
 
 function changePage(dir) {
@@ -406,252 +356,120 @@ function changePage(dir) {
 function setZoom(val) {
   zoomLevel = val;
   document.getElementById('zoom-label').textContent = val + '%';
-  var canvas = document.getElementById('page-canvas');
-  if (canvas.width > 0) {
-    // canvas is rendered at scale=2 (retina), so 100% zoom = canvas.width/2 CSS px
-    canvas.style.width = Math.round(canvas.width * val / 200) + 'px';
-    canvas.style.height = 'auto';
-  }
+  applyZoom();
 }
 
-// ── Click handler ──
+function applyZoom() {
+  var canvas = document.getElementById('page-canvas');
+  if (!canvas.width) return;
+  canvas.style.width  = Math.round(canvas.width  * zoomLevel / 200) + 'px';
+  canvas.style.height = 'auto';
+}
+
+// ── Click ──
 function onCanvasClick(e) {
   if (document.getElementById('word-popup').contains(e.target)) return;
+  if (document.getElementById('word-picker').contains(e.target)) return;
   var canvas = document.getElementById('page-canvas');
   var rect = canvas.getBoundingClientRect();
-  if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) {
-    closePopup(); return;
-  }
+  if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) { closePopup(); closePicker(); return; }
   var scaleX = canvas.width / rect.width;
   var scaleY = canvas.height / rect.height;
+  clickX = e.clientX; clickY = e.clientY;
   var cx = (e.clientX - rect.left) * scaleX;
-  var cy = (e.clientY - rect.top) * scaleY;
-  popupX = e.clientX; popupY = e.clientY;
+  var cy = (e.clientY - rect.top)  * scaleY;
   handleWordAt(cx, cy, canvas);
 }
 
 function handleWordAt(cx, cy, canvas) {
   var pg = pages[currentPage];
-
   if (pg.hasText && pg.words.length > 0) {
-    // 近くの単語を最大5個取得してピッカーを表示
     var candidates = getNearbyWords(pg.words, cx, cy, 5);
-    if (candidates.length > 0) {
-      showWordPicker(candidates, canvas);
-      return;
-    }
+    if (candidates.length > 0) { showPicker(candidates, canvas); return; }
   }
-  // Image fallback: crop around click
-  var cw = 420, ch = 160;
-  var cx0 = Math.max(0, cx - cw/2), cy0 = Math.max(0, cy - ch/2);
-  var cw2 = Math.min(canvas.width - cx0, cw), ch2 = Math.min(canvas.height - cy0, ch);
+  // Image fallback
+  var cw = 400, ch = 150;
+  var cx0 = Math.max(0, cx-cw/2), cy0 = Math.max(0, cy-ch/2);
+  var cw2 = Math.min(canvas.width-cx0, cw), ch2 = Math.min(canvas.height-cy0, ch);
   var crop = document.createElement('canvas');
   crop.width = cw2; crop.height = ch2;
   crop.getContext('2d').drawImage(canvas, cx0, cy0, cw2, ch2, 0, 0, cw2, ch2);
-  showPopup();
+  closePicker();
+  showPopup(clickX, clickY);
   lookupByImage(crop.toDataURL('image/jpeg', 0.92));
 }
 
 function getNearbyWords(words, cx, cy, n) {
-  // まず最近傍の行を特定
   var bestLineY = null, bestLineDist = Infinity;
   for (var i = 0; i < words.length; i++) {
     var wcy = words[i].y + words[i].h / 2;
-    var dy = Math.abs(cy - wcy);
-    if (dy < bestLineDist) { bestLineDist = dy; bestLineY = wcy; }
+    if (Math.abs(cy - wcy) < bestLineDist) { bestLineDist = Math.abs(cy - wcy); bestLineY = wcy; }
   }
-  // 同じ行の単語を絞り込んでX距離でソート
   var lineWords = [];
   for (var i = 0; i < words.length; i++) {
     var wcy = words[i].y + words[i].h / 2;
     if (Math.abs(wcy - bestLineY) < words[i].h * 1.2) {
-      var dx = Math.abs(cx - (words[i].x + words[i].w / 2));
-      lineWords.push({ word: words[i], dx: dx });
+      lineWords.push({ w: words[i], dx: Math.abs(cx - (words[i].x + words[i].w / 2)) });
     }
   }
   lineWords.sort(function(a, b){ return a.dx - b.dx; });
-  // 重複除去して上位n件
   var seen = {}, result = [];
   for (var i = 0; i < lineWords.length && result.length < n; i++) {
-    var w = lineWords[i].word.word;
-    if (!seen[w]) { seen[w] = true; result.push(lineWords[i].word); }
+    var word = lineWords[i].w.word;
+    if (!seen[word]) { seen[word] = true; result.push(lineWords[i].w); }
   }
   return result;
 }
 
-var _pendingCanvas = null;
-
-function showWordPicker(candidates, canvas) {
-  _pendingCanvas = canvas;
-  // Hide def panel
-  document.getElementById('word-def-panel').style.display = 'none';
-
-  var panel = document.getElementById('word-picker-panel');
-  // Clear old items (keep header)
-  var header = panel.querySelector('.wp-header');
-  panel.innerHTML = '';
-  panel.appendChild(header);
-
+// ── Picker popup ──
+function showPicker(candidates, canvas) {
+  closePicker();
+  var picker = document.getElementById('word-picker');
+  picker.innerHTML = '';
   candidates.forEach(function(w) {
     var item = document.createElement('div');
     item.className = 'wp-item';
     item.innerHTML = '<b>' + w.word + '</b>';
-    function pick(e) {
+    function onPick(e) {
       e.preventDefault(); e.stopPropagation();
-      document.getElementById('word-picker-panel').style.display = 'none';
+      closePicker();
       highlightWord(w, canvas);
-      showDefPanel(w.word);
+      var px = clickX + 8, py = clickY;
+      showPopup(px, py);
+      lookupByText(w.word);
     }
-    item.addEventListener('click', pick);
-    item.addEventListener('touchend', pick);
-    panel.appendChild(item);
+    item.addEventListener('click', onPick);
+    item.addEventListener('touchend', onPick);
+    picker.appendChild(item);
   });
-
-  panel.style.display = 'flex';
+  // Position to the right of click
+  var m = 8;
+  picker.style.display = 'block';
+  var pw = picker.offsetWidth || 140;
+  var ph = picker.offsetHeight || (candidates.length * 36 + 8);
+  var left = clickX + 12;
+  var top  = clickY - ph / 2;
+  if (left + pw > window.innerWidth - m) left = clickX - pw - 12;
+  left = Math.max(m, Math.min(left, window.innerWidth - pw - m));
+  top  = Math.max(m, Math.min(top,  window.innerHeight - ph - m));
+  picker.style.left = left + 'px';
+  picker.style.top  = top + 'px';
 }
 
 function closePicker() {
   document.getElementById('word-picker').style.display = 'none';
 }
 
-function findNearestWord(words, cx, cy) {
-  if (!words.length) return null;
-
-  // Step1: 最も近いY座標の行を特定（行の中心Y との距離）
-  var bestLineY = null, bestLineDist = Infinity;
-  for (var i = 0; i < words.length; i++) {
-    var wcy = words[i].y + words[i].h / 2;
-    var dy = Math.abs(cy - wcy);
-    if (dy < bestLineDist) { bestLineDist = dy; bestLineY = wcy; }
-  }
-
-  // Step2: 同じ行（Y中心が近い）の単語だけ絞り込む
-  var lineWords = [];
-  for (var i = 0; i < words.length; i++) {
-    var wcy = words[i].y + words[i].h / 2;
-    if (Math.abs(wcy - bestLineY) < words[i].h * 1.2) {
-      lineWords.push(words[i]);
-    }
-  }
-
-  // Step3: その行の中でX座標が最も近い単語を返す
-  var best = null, bestDist = Infinity;
-  for (var i = 0; i < lineWords.length; i++) {
-    var wcx = lineWords[i].x + lineWords[i].w / 2;
-    var dx = Math.abs(cx - wcx);
-    if (dx < bestDist) { bestDist = dx; best = lineWords[i]; }
-  }
-  return best;
-}
-
-function getWordContext(words, target) {
-  var idx = words.indexOf(target);
-  return words.slice(Math.max(0,idx-5), idx+6).map(function(w){ return w.word; }).join(' ');
-}
-
 function highlightWord(w, canvas) {
   var ctx = canvas.getContext('2d');
-  ctx.save();
-  ctx.fillStyle = 'rgba(200,169,110,0.4)';
-  ctx.fillRect(w.x, w.y, w.w, w.h);
-  ctx.restore();
+  ctx.save(); ctx.fillStyle = 'rgba(200,169,110,0.4)';
+  ctx.fillRect(w.x, w.y, w.w, w.h); ctx.restore();
   var dataUrl = pages[currentPage].dataUrl;
-  setTimeout(function(){
-    var img = new Image();
-    img.onload = function(){ ctx.drawImage(img,0,0); };
-    img.src = dataUrl;
-  }, 600);
+  setTimeout(function(){ var img = new Image(); img.onload = function(){ ctx.drawImage(img,0,0); }; img.src = dataUrl; }, 700);
 }
 
-// ── Touch ──
-function initTouch() {
-  var wrap = document.getElementById('canvas-wrap');
-  var tStartX = 0, tStartY = 0, tStartTime = 0, tMoved = false, tMulti = false;
-  var pinchInitDist = 0, pinchInitZoom = 100;
-
-  wrap.addEventListener('touchstart', function(e) {
-    if (e.touches.length >= 2) {
-      tMulti = true;
-      pinchInitDist = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
-      );
-      pinchInitZoom = zoomLevel;
-      return;
-    }
-    tStartX = e.touches[0].clientX;
-    tStartY = e.touches[0].clientY;
-    tStartTime = Date.now();
-    tMoved = false;
-    tMulti = false;
-  }, { passive: true });
-
-  wrap.addEventListener('touchmove', function(e) {
-    if (e.touches.length >= 2) {
-      tMulti = true;
-      var dist = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
-      );
-      var newZoom = Math.round(Math.max(30, Math.min(200, pinchInitZoom * dist / pinchInitDist)));
-      setZoom(newZoom);
-      document.getElementById('zoom-slider').value = newZoom;
-      return;
-    }
-    var dx = Math.abs(e.touches[0].clientX - tStartX);
-    var dy = Math.abs(e.touches[0].clientY - tStartY);
-    if (dx > 5 || dy > 5) tMoved = true;
-  }, { passive: true });
-
-  wrap.addEventListener('touchend', function(e) {
-    if (e.touches.length > 0) return;
-    if (tMulti) { tMulti = false; return; }
-    if (tMoved) return;
-    if (Date.now() - tStartTime > 400) return;
-
-    var tc = e.changedTouches[0];
-    // Final distance check
-    var dx = Math.abs(tc.clientX - tStartX);
-    var dy = Math.abs(tc.clientY - tStartY);
-    if (dx > 10 || dy > 10) return;
-
-    var canvas = document.getElementById('page-canvas');
-    var rect = canvas.getBoundingClientRect();
-    if (tc.clientX < rect.left || tc.clientX > rect.right || tc.clientY < rect.top || tc.clientY > rect.bottom) {
-      closePopup(); return;
-    }
-    var scaleX = canvas.width / rect.width;
-    var scaleY = canvas.height / rect.height;
-    var cx = (tc.clientX - rect.left) * scaleX;
-    var cy = (tc.clientY - rect.top) * scaleY;
-    popupX = tc.clientX; popupY = tc.clientY;
-    handleWordAt(cx, cy, canvas);
-  }, { passive: true });
-}
-
-// ── Popup drag (mouse only) ──
-function initPopupDrag() {
-  var popup = document.getElementById('word-popup');
-  var dragging = false, startX = 0, startY = 0, origLeft = 0, origTop = 0;
-  popup.addEventListener('mousedown', function(e) {
-    if (e.target.closest('.pa') || e.target.closest('#pbody')) return;
-    dragging = true;
-    startX = e.clientX; startY = e.clientY;
-    origLeft = parseInt(popup.style.left) || 0;
-    origTop  = parseInt(popup.style.top)  || 0;
-    e.preventDefault();
-  });
-  document.addEventListener('mousemove', function(e) {
-    if (!dragging) return;
-    var m = 8;
-    popup.style.left = Math.max(m, Math.min(origLeft + e.clientX - startX, window.innerWidth  - popup.offsetWidth  - m)) + 'px';
-    popup.style.top  = Math.max(m, Math.min(origTop  + e.clientY - startY, window.innerHeight - popup.offsetHeight - m)) + 'px';
-  });
-  document.addEventListener('mouseup', function() { dragging = false; });
-}
-
-// ── Popup display ──
-function showPopup() {
+// ── Definition popup ──
+function showPopup(x, y) {
   currentWord = ''; currentDef = ''; currentEx = '';
   document.getElementById('pw').textContent = '';
   document.getElementById('pp').textContent = '';
@@ -659,89 +477,26 @@ function showPopup() {
   document.getElementById('pa').style.display = 'none';
   var popup = document.getElementById('word-popup');
   popup.style.display = 'block';
-  positionPopup();
+  positionPopup(x, y);
 }
 
-function positionPopup() {
+function positionPopup(x, y) {
   var popup = document.getElementById('word-popup');
-  var pw = popup.offsetWidth, ph = popup.offsetHeight, m = 10;
-  var left = popupX + 14, top = popupY - ph/2;
-  if (left + pw > window.innerWidth - m) left = popupX - pw - 14;
+  var pw = popup.offsetWidth || 320;
+  var ph = popup.offsetHeight || 200;
+  var m = 10;
+  var left = (x || clickX) + 14;
+  var top  = (y || clickY) - ph / 2;
+  if (left + pw > window.innerWidth - m) left = (x || clickX) - pw - 14;
   left = Math.max(m, Math.min(left, window.innerWidth - pw - m));
   top  = Math.max(m, Math.min(top,  window.innerHeight - ph - m));
   popup.style.left = left + 'px';
-  popup.style.top  = top  + 'px';
+  popup.style.top  = top + 'px';
 }
 
-function closePopup() {
-  document.getElementById('word-popup').style.display = 'none';
-}
-function closePicker() {
-  document.getElementById('word-picker-panel').style.display = 'none';
-  document.getElementById('word-def-panel').style.display = 'none';
-}
-
-function showDefPanel(word) {
-  var panel = document.getElementById('word-def-panel');
-  document.getElementById('wd-word').textContent = word;
-  document.getElementById('wd-phon').textContent = '';
-  document.getElementById('wd-body').innerHTML = '<div class="wd-loading"><div class="spinner"></div>調べています...</div>';
-  document.getElementById('btn-wd-save').textContent = '+ 保存';
-  document.getElementById('btn-wd-save').className = 'pbtn save';
-  panel.style.display = 'flex';
-  // Check cache
-  var cached = vocabList.filter(function(v){ return v.word.toLowerCase() === word.toLowerCase(); })[0];
-  if (cached) {
-    renderDefPanel({ word: cached.word, phonetic:'', meanings:[], definition: cached.definition, example: cached.example }, true);
-    return;
-  }
-  callAPI({ model:'claude-sonnet-4-20250514', max_tokens:600, system:DICT_SYSTEM,
-    messages:[{role:'user',content:'Define: "' + word + '"'}] },
-    function(data) { renderDefPanel(parseResult(data), false); }
-  );
-}
-
-function parseResult(data) {
-  try {
-    var raw = (data.content && data.content[0] ? data.content[0].text : '{}').replace(/```json|```/g,'').trim();
-    return JSON.parse(raw);
-  } catch(e) { return {}; }
-}
-
-function renderDefPanel(obj, isSaved) {
-  currentWord = obj.word || document.getElementById('wd-word').textContent;
-  currentDef = (obj.meanings||[]).map(function(m){ return m.definition; }).join(' / ') || obj.definition || '';
-  currentEx = obj.example || '';
-  document.getElementById('wd-word').textContent = currentWord;
-  document.getElementById('wd-phon').textContent = obj.phonetic || '';
-  var html = '';
-  (obj.meanings||[]).forEach(function(m,i){
-    html += '<div class="wd-meaning"><span class="wd-num">'+(i+1)+'</span>'
-      +(m.sense?'<span class="wd-tag d">'+m.sense+'</span>':'')
-      +(m.tag?'<span class="wd-tag f">'+m.tag+'</span>':'')
-      +'<div class="wd-def">'+m.definition+'</div></div>';
-  });
-  if (!obj.meanings||!obj.meanings.length) html='<div class="wd-def">'+(obj.definition||'')+'</div>';
-  if (obj.note) html+='<div class="wd-note">'+obj.note+'</div>';
-  if (obj.example) html+='<div class="wd-ex">'+obj.example+'</div>';
-  document.getElementById('wd-body').innerHTML = html;
-  var sb = document.getElementById('btn-wd-save');
-  sb.textContent = isSaved ? '✓ 保存済み' : '+ 保存';
-  sb.className = isSaved ? 'pbtn saved' : 'pbtn save';
-}
-
-function saveWordFromPanel() {
-  if (!currentWord) return;
-  if (vocabList.some(function(v){ return v.word.toLowerCase() === currentWord.toLowerCase(); })) return;
-  vocabList.push({ word: currentWord, definition: currentDef, example: currentEx });
-  updateVocabUI();
-  document.getElementById('btn-wd-save').textContent = '✓ 保存済み';
-  document.getElementById('btn-wd-save').className = 'pbtn saved';
-}
+function closePopup() { document.getElementById('word-popup').style.display = 'none'; }
 
 // ── API ──
-var DICT_SYSTEM = 'You are an English dictionary for a Japanese reader. Respond ONLY in valid JSON (no markdown, no preamble): {"word":"string","phonetic":"IPA","meanings":[{"sense":"短い日本語ラベル","tag":"一般/IT/医学/etc.","definition":"一文の日本語説明"}],"note":"補足 or null","example":"one English sentence"}. Include 2-5 meanings.';
-
 function callAPI(payload, onSuccess) {
   var key = getApiKey();
   if (!key) { showError('APIキーを入力して「保存」を押してください'); return; }
@@ -771,61 +526,57 @@ function lookupByText(word) {
   var cached = vocabList.filter(function(v){ return v.word.toLowerCase() === word.toLowerCase(); })[0];
   if (cached) {
     currentWord = cached.word; currentDef = cached.definition; currentEx = cached.example;
-    document.getElementById('pw').textContent = currentWord;
-    document.getElementById('pp').textContent = '';
-    document.getElementById('pbody').innerHTML = '<div class="pmdef">' + currentDef + '</div>' + (currentEx ? '<div class="pex">' + currentEx + '</div>' : '');
-    document.getElementById('pa').style.display = 'flex';
-    document.getElementById('btn-save-word').textContent = '✓ 保存済み';
-    document.getElementById('btn-save-word').className = 'pbtn saved';
-    requestAnimationFrame(positionPopup);
+    renderPopupResult({ word: cached.word, phonetic:'', meanings:[], note:null, example: cached.example, definition: cached.definition });
     return;
   }
-  callAPI({ model:'claude-sonnet-4-20250514', max_tokens:600, system:DICT_SYSTEM, messages:[{role:'user',content:'Define: "' + word + '"'}] }, renderResult);
+  callAPI({ model:'claude-sonnet-4-20250514', max_tokens:600, system:DICT_SYSTEM,
+    messages:[{role:'user',content:'Define: "'+word+'"'}] }, renderResult);
 }
 
 function lookupByImage(dataUrl) {
-  callAPI({
-    model:'claude-sonnet-4-20250514', max_tokens:600,
+  callAPI({ model:'claude-sonnet-4-20250514', max_tokens:600,
     system: DICT_SYSTEM + ' A cropped image is provided. Identify the English word closest to the center and define it.',
     messages:[{role:'user',content:[
       {type:'image',source:{type:'base64',media_type:'image/jpeg',data:dataUrl.split(',')[1]}},
       {type:'text',text:'What English word is at the center? Define it.'}
-    ]}]
-  }, renderResult);
+    ]}] }, renderResult);
 }
 
 function renderResult(data) {
-  // Used for image fallback (floating popup)
   try {
-    var obj = parseResult(data);
-    currentWord = obj.word || '';
-    currentDef = (obj.meanings||[]).map(function(m){ return m.definition; }).join(' / ') || obj.definition || '';
-    currentEx = obj.example || '';
-    document.getElementById('pw').textContent = currentWord;
-    document.getElementById('pp').textContent = obj.phonetic || '';
-    var html = '';
-    (obj.meanings||[]).forEach(function(m, i) {
-      html += '<div class="pmeaning"><span class="pmnum">' + (i+1) + '</span>'
-        + (m.sense ? '<span class="pmtag d">' + m.sense + '</span>' : '')
-        + (m.tag   ? '<span class="pmtag f">' + m.tag   + '</span>' : '')
-        + '<div class="pmdef">' + m.definition + '</div></div>';
-    });
-    if (!obj.meanings || !obj.meanings.length) html = '<div class="pmdef">' + (obj.definition||'') + '</div>';
-    if (obj.note) html += '<div class="pnote">' + obj.note + '</div>';
-    if (obj.example) html += '<div class="pex">' + obj.example + '</div>';
-    document.getElementById('pbody').innerHTML = html;
-    document.getElementById('pa').style.display = 'flex';
-    var isSaved = vocabList.some(function(v){ return v.word.toLowerCase() === currentWord.toLowerCase(); });
-    var sb = document.getElementById('btn-save-word');
-    sb.textContent = isSaved ? '✓ 保存済み' : '+ 保存';
-    sb.className = isSaved ? 'pbtn saved' : 'pbtn save';
-    requestAnimationFrame(positionPopup);
+    var raw = (data.content && data.content[0] ? data.content[0].text : '{}').replace(/```json|```/g,'').trim();
+    renderPopupResult(JSON.parse(raw));
   } catch(ex) { showError('レスポンス解析エラー'); }
 }
 
+function renderPopupResult(obj) {
+  currentWord = obj.word || '';
+  currentDef  = (obj.meanings||[]).map(function(m){ return m.definition; }).join(' / ') || obj.definition || '';
+  currentEx   = obj.example || '';
+  document.getElementById('pw').textContent = currentWord;
+  document.getElementById('pp').textContent = obj.phonetic || '';
+  var html = '';
+  (obj.meanings||[]).forEach(function(m,i){
+    html += '<div class="pmeaning"><span class="pmnum">'+(i+1)+'</span>'
+      +(m.sense?'<span class="pmtag d">'+m.sense+'</span>':'')
+      +(m.tag  ?'<span class="pmtag f">'+m.tag  +'</span>':'')
+      +'<div class="pmdef">'+m.definition+'</div></div>';
+  });
+  if ((!obj.meanings||!obj.meanings.length) && (obj.definition||currentDef))
+    html = '<div class="pmdef">'+(obj.definition||currentDef)+'</div>';
+  if (obj.note)    html += '<div class="pnote">'+obj.note+'</div>';
+  if (obj.example) html += '<div class="pex">'+obj.example+'</div>';
+  document.getElementById('pbody').innerHTML = html;
+  document.getElementById('pa').style.display = 'flex';
+  var isSaved = vocabList.some(function(v){ return v.word.toLowerCase() === currentWord.toLowerCase(); });
+  var sb = document.getElementById('btn-save-word');
+  sb.textContent = isSaved ? '✓ 保存済み' : '+ 保存';
+  sb.className = isSaved ? 'pbtn saved' : 'pbtn save';
+  requestAnimationFrame(function(){ positionPopup(clickX + 14, clickY); });
+}
+
 function saveWord() {
-  if (!currentWord) return;
-  if (vocabList.some(function(v){ return v.word.toLowerCase() === currentWord.toLowerCase(); })) return;
+  if (!currentWord || vocabList.some(function(v){ return v.word.toLowerCase() === currentWord.toLowerCase(); })) return;
   vocabList.push({ word: currentWord, definition: currentDef, example: currentEx });
   updateVocabUI();
   document.getElementById('btn-save-word').textContent = '✓ 保存済み';
@@ -840,8 +591,10 @@ function updateVocabUI() {
   list.querySelectorAll('.vi').forEach(function(el){ el.remove(); });
   vocabList.forEach(function(v, i) {
     var item = document.createElement('div'); item.className = 'vi';
-    item.innerHTML = '<div style="flex:1;min-width:0"><div class="viw">' + v.word + '</div><div class="vid">' + v.definition + '</div></div>'
-      + '<button class="vdel" data-idx="' + i + '">×</button>';
+    // Short definition: first sentence or first 40 chars
+    var shortDef = v.definition ? v.definition.split('。')[0].substring(0, 40) : '';
+    item.innerHTML = '<div style="flex:1;min-width:0"><div class="viw">'+v.word+'</div><div class="vid">'+shortDef+'</div></div>'
+      + '<button class="vdel" data-idx="'+i+'">×</button>';
     list.appendChild(item);
   });
   list.querySelectorAll('.vdel').forEach(function(btn){
@@ -861,16 +614,73 @@ function exportCSV() {
   a.download = 'vocab_list.csv'; a.click();
 }
 
+// ── Touch ──
+function initTouch() {
+  var wrap = document.getElementById('canvas-wrap');
+  var tX=0, tY=0, tT=0, tMoved=false, tMulti=false;
+  var pDist=0, pZoom=100;
+  wrap.addEventListener('touchstart', function(e){
+    if (e.touches.length >= 2) {
+      tMulti = true;
+      pDist = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+      pZoom = zoomLevel; return;
+    }
+    tX=e.touches[0].clientX; tY=e.touches[0].clientY; tT=Date.now(); tMoved=false; tMulti=false;
+  }, {passive:true});
+  wrap.addEventListener('touchmove', function(e){
+    if (e.touches.length >= 2) {
+      tMulti = true;
+      var d = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+      var z = Math.round(Math.max(30, Math.min(200, pZoom*d/pDist)));
+      setZoom(z); document.getElementById('zoom-slider').value = z; return;
+    }
+    if (Math.abs(e.touches[0].clientX-tX)>5 || Math.abs(e.touches[0].clientY-tY)>5) tMoved=true;
+  }, {passive:true});
+  wrap.addEventListener('touchend', function(e){
+    if (e.touches.length > 0) return;
+    if (tMulti) { tMulti=false; return; }
+    if (tMoved) return;
+    if (Date.now()-tT > 400) return;
+    var tc = e.changedTouches[0];
+    if (Math.abs(tc.clientX-tX)>10 || Math.abs(tc.clientY-tY)>10) return;
+    var canvas = document.getElementById('page-canvas');
+    var rect = canvas.getBoundingClientRect();
+    if (tc.clientX<rect.left||tc.clientX>rect.right||tc.clientY<rect.top||tc.clientY>rect.bottom) { closePopup(); closePicker(); return; }
+    clickX=tc.clientX; clickY=tc.clientY;
+    var cx=(tc.clientX-rect.left)*(canvas.width/rect.width);
+    var cy=(tc.clientY-rect.top)*(canvas.height/rect.height);
+    handleWordAt(cx, cy, canvas);
+  }, {passive:true});
+}
+
+// ── Popup drag (mouse) ──
+function initPopupDrag() {
+  var popup = document.getElementById('word-popup');
+  var drag=false, sx=0, sy=0, ol=0, ot=0;
+  popup.addEventListener('mousedown', function(e){
+    if (e.target.closest('.pa')||e.target.closest('#pbody')) return;
+    drag=true; sx=e.clientX; sy=e.clientY;
+    ol=parseInt(popup.style.left)||0; ot=parseInt(popup.style.top)||0;
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e){
+    if (!drag) return;
+    var m=8;
+    popup.style.left=Math.max(m,Math.min(ol+e.clientX-sx,window.innerWidth-popup.offsetWidth-m))+'px';
+    popup.style.top =Math.max(m,Math.min(ot+e.clientY-sy,window.innerHeight-popup.offsetHeight-m))+'px';
+  });
+  document.addEventListener('mouseup', function(){ drag=false; });
+}
+
 function setProgress(msg, pct) {
-  document.getElementById('prog-wrap').style.display = 'block';
-  document.getElementById('prog-label').textContent = msg;
-  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('prog-wrap').style.display='block';
+  document.getElementById('prog-label').textContent=msg;
+  document.getElementById('prog-fill').style.width=pct+'%';
 }
 
 function resetApp() {
   pages=[]; currentPage=0; vocabList=[];
-  setZoom(100); document.getElementById('zoom-slider').value = 100;
-  document.getElementById('page-canvas').style.width = '';
+  setZoom(100); document.getElementById('zoom-slider').value=100;
   document.getElementById('upload-pane').style.display='flex';
   document.getElementById('reader-pane').style.display='none';
   document.getElementById('vocab-pane').style.display='none';
@@ -879,7 +689,7 @@ function resetApp() {
   document.getElementById('count').textContent='0';
   document.getElementById('csv-btn').disabled=true;
   document.getElementById('file-input').value='';
-  closePopup(); updateVocabUI();
+  closePopup(); closePicker(); updateVocabUI();
 }
 </script>
 </body>
