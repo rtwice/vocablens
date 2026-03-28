@@ -406,7 +406,7 @@ function getImageCandidates(dataUrl, canvas) {
   if (!key) { showPopup(clickX, clickY); showError('APIキーを入力して「保存」を押してください'); return; }
   // Show a small loading indicator in picker position
   var picker = document.getElementById('word-picker');
-  picker.innerHTML = '<div class="wp-item" style="color:var(--text2);font-family:'JetBrains Mono',monospace;font-size:11px;display:flex;align-items:center;gap:8px;"><div class="spinner"></div>読み取り中...</div>';
+  picker.innerHTML = '<div class="wp-item" style="color:var(--text2);font-family:sans-serif;font-size:11px;display:flex;align-items:center;gap:8px;"><div class="spinner"></div>読み取り中...</div>';
   var m = 8, pw = 160;
   var left = clickX + 12, top = clickY - 20;
   if (left + pw > window.innerWidth - m) left = clickX - pw - 12;
