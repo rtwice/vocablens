@@ -304,10 +304,14 @@ function extractWords(tc, vp, scale) {
     }
   }
 
-  if (words.length > 0) {
-    console.log('[VL2] vp.transform='+JSON.stringify(vp.transform)+' scale='+scale);
-    if (tc.items[0]) console.log('[VL2] item0.transform='+JSON.stringify(tc.items[0].transform)+' width='+tc.items[0].width+' height='+tc.items[0].height);
-    console.log('[VL2] words[0]='+ JSON.stringify(words[0]));
+  if (words.length > 0 && tc.items.length > 0) {
+    var item0 = tc.items[0];
+    var t0 = pdfjsLib.Util.transform(vp.transform, item0.transform);
+    console.log('[VL3] item0.str="'+item0.str+'" item0.width='+item0.width+' item0.height='+item0.height);
+    console.log('[VL3] item0.transform='+JSON.stringify(item0.transform));
+    console.log('[VL3] t0(after vp.transform)='+JSON.stringify(t0.map(function(v){return Math.round(v*100)/100;})));
+    console.log('[VL3] vp.transform='+JSON.stringify(vp.transform));
+    console.log('[VL3] words[0]='+JSON.stringify(words[0]));
   }
   return words;
 }
