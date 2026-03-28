@@ -266,10 +266,24 @@ function extractWords(tc, vp, scale) {
   for (var i = 0; i < tc.items.length; i++) {
     var item = tc.items[i];
     if (!item.str.trim()) continue;
+
+    // item.transform = [scaleX, skewY, skewX, scaleY, x, y] in PDF user space
+    // vp.transform converts PDF space -> canvas pixel space
     var t = pdfjsLib.Util.transform(vp.transform, item.transform);
-    var x = t[4], y = t[5];
-    var itemH = Math.abs(t[3]);
+
+    // t[4],t[5] = canvas position of the text baseline (bottom-left of text)
+    var baseX = t[4];
+    var baseY = t[5];
+
+    // Font size in canvas pixels = magnitude of the Y scale component
+    var fontH = Math.sqrt(t[1]*t[1] + t[3]*t[3]);
+
+    // item.width is in PDF user space; multiply by scale to get canvas pixels
     var itemW = item.width * scale;
+
+    // Top of the text box = baseY - fontH (PDF y-axis points up, canvas points down)
+    var top = baseY - fontH;
+
     var tokens = item.str.split(/\s+/);
     var charW = itemW / Math.max(item.str.length, 1);
     var offsetX = 0;
@@ -279,7 +293,13 @@ function extractWords(tc, vp, scale) {
       var tokW = tok.length * charW;
       var clean = tok.replace(/[^a-zA-Z'-]/g, '');
       if (clean.length >= 2) {
-        words.push({ word: clean, raw: tok, x: x + offsetX, y: y - itemH, w: tokW, h: itemH });
+        words.push({
+          word: clean, raw: tok,
+          x: baseX + offsetX,
+          y: top,
+          w: tokW,
+          h: fontH
+        });
       }
       offsetX += tokW;
     }
