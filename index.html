@@ -187,7 +187,67 @@ header{display:flex;align-items:center;justify-content:space-between;padding:.65
 
 <script>
 var API_URL = 'https://api.anthropic.com/v1/messages';
-console.log('[VocabLens] version: 2026-03-28-v1');
+console.log('[VocabLens] version: 2026-03-28-v2');
+
+// ── Supabase ──
+var SB_URL = 'https://xmpogxfqrryablfribzm.supabase.co';
+var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhtcG9neGZxcnJ5YWJsZnJpYnptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2OTkzNTgsImV4cCI6MjA5MDI3NTM1OH0.eXWMq1mVV-ekuofHhGyI6U6XV66WyaFfDpKButa6KUY';
+
+function sbFetch(path, method, body) {
+  return fetch(SB_URL + '/rest/v1/' + path, {
+    method: method || 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SB_KEY,
+      'Authorization': 'Bearer ' + SB_KEY,
+      'Prefer': method === 'POST' ? 'return=minimal' : ''
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
+}
+
+// 単語をSupabaseに保存
+function sbSaveWord(word, definition, example) {
+  sbFetch('vocab', 'POST', { word: word, definition: definition, example: example })
+    .then(function(r){ if (!r.ok) console.warn('[SB] save word failed:', r.status); })
+    .catch(function(e){ console.warn('[SB] save word error:', e); });
+}
+
+// 単語リストをSupabaseから取得
+function sbLoadVocab() {
+  return sbFetch('vocab?order=created_at.asc')
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if (!Array.isArray(data)) return;
+      vocabList = data.map(function(v){ return { word: v.word, definition: v.definition || '', example: v.example || '', sbId: v.id }; });
+      updateVocabUI();
+      console.log('[SB] loaded', vocabList.length, 'words');
+    })
+    .catch(function(e){ console.warn('[SB] load vocab error:', e); });
+}
+
+// 単語をSupabaseから削除
+function sbDeleteWord(sbId) {
+  if (!sbId) return;
+  sbFetch('vocab?id=eq.' + sbId, 'DELETE')
+    .catch(function(e){ console.warn('[SB] delete error:', e); });
+}
+
+// 読書進捗を保存
+function sbSaveProgress(filename, page, total) {
+  sbFetch('progress?filename=eq.' + encodeURIComponent(filename), 'DELETE')
+    .then(function(){
+      return sbFetch('progress', 'POST', { filename: filename, page: page, total: total });
+    })
+    .catch(function(e){ console.warn('[SB] save progress error:', e); });
+}
+
+// 読書進捗を取得
+function sbLoadProgress() {
+  return sbFetch('progress?order=updated_at.desc')
+    .then(function(r){ return r.json(); })
+    .catch(function(){ return []; });
+}
 var DICT_SYSTEM = 'You are an English dictionary for a Japanese reader. Respond ONLY in valid JSON (no markdown, no preamble): {"word":"string","phonetic":"IPA","meanings":[{"sense":"短い日本語ラベル","tag":"一般/IT/医学/etc.","definition":"一文の日本語説明"}],"note":"補足 or null","example":"one English sentence"}. Include 2-5 meanings.';
 
 var pages = [], currentPage = 0, vocabList = [];
@@ -221,6 +281,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
   document.addEventListener('keydown', function(e){
     if (e.key === 'Escape') { closePopup(); closePicker(); }
+  });
+
+  // Supabaseから単語と進捗を読み込む
+  sbLoadVocab();
+  sbLoadProgress().then(function(history){
+    if (history && history.length > 0) showHistory(history);
   });
   document.addEventListener('mousedown', function(e) {
     var picker = document.getElementById('word-picker');
@@ -341,6 +407,8 @@ function renderPage(idx) {
   document.getElementById('prev-btn').disabled = idx === 0;
   document.getElementById('next-btn').disabled = idx === pages.length - 1;
   closePopup(); closePicker();
+  // 進捗を保存
+  if (pages[idx]) sbSaveProgress(pages[idx].label.split(' p.')[0], idx+1, pages.length);
   var canvas = document.getElementById('page-canvas');
   var img = new Image();
   img.onload = function() {
@@ -629,6 +697,7 @@ function renderPopupResult(obj) {
 function saveWord() {
   if (!currentWord || vocabList.some(function(v){ return v.word.toLowerCase() === currentWord.toLowerCase(); })) return;
   vocabList.push({ word: currentWord, definition: currentDef, example: currentEx });
+  sbSaveWord(currentWord, currentDef, currentEx);
   updateVocabUI();
   document.getElementById('btn-save-word').textContent = '✓ 保存済み';
   document.getElementById('btn-save-word').className = 'pbtn saved';
@@ -653,7 +722,12 @@ function updateVocabUI() {
   });
 }
 
-function removeWord(idx) { vocabList.splice(idx,1); updateVocabUI(); }
+function removeWord(idx) {
+  var item = vocabList[idx];
+  if (item && item.sbId) sbDeleteWord(item.sbId);
+  vocabList.splice(idx,1);
+  updateVocabUI();
+}
 
 function exportCSV() {
   if (!vocabList.length) return;
@@ -740,6 +814,26 @@ function initPopupDrag() {
     moveDrag(e.touches[0].clientX, e.touches[0].clientY);
   }, {passive:true});
   document.addEventListener('touchend', function(){ drag=false; }, {passive:true});
+}
+
+function showHistory(history) {
+  if (!history || !history.length) return;
+  // 読書履歴をvocab paneのfooterの上に表示
+  var existing = document.getElementById('history-section');
+  if (existing) existing.remove();
+  var sec = document.createElement('div');
+  sec.id = 'history-section';
+  sec.style.cssText = 'border-top:1px solid var(--border);padding:.75rem 1rem;flex-shrink:0;';
+  sec.innerHTML = '<div style="font-size:10px;color:var(--text3);letter-spacing:.1em;margin-bottom:6px;">最近読んだ資料</div>';
+  history.slice(0,5).forEach(function(h){
+    var row = document.createElement('div');
+    row.style.cssText = 'font-size:11px;color:var(--text2);padding:3px 0;display:flex;justify-content:space-between;';
+    var name = h.filename.length > 20 ? h.filename.substring(0,20)+'…' : h.filename;
+    row.innerHTML = '<span style="color:var(--text)">'+name+'</span><span>'+h.page+'/'+h.total+'p</span>';
+    sec.appendChild(row);
+  });
+  var vfoot = document.querySelector('.vfoot');
+  document.getElementById('vocab-pane').insertBefore(sec, vfoot);
 }
 
 function setProgress(msg, pct) {
