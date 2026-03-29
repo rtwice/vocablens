@@ -143,4 +143,5 @@ MIT License — 自由に使用・改変・再配布できます。
 
 ## 作者
 
-[@rtwice](https://twitter.com/rtwice)
+[@rtwice]
+[@riruro_2](https://twitter.com/riruro_2)
