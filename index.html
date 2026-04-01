@@ -915,7 +915,7 @@ function paConvertWork(w, isSeed){
     year: w.publication_year||'?',
     cites: w.cited_by_count||0,
     authors: authors,
-    abstract: w.abstract||'',
+    abstract: (function(aii){ if(!aii) return ''; try{ var pos=[]; Object.keys(aii).forEach(function(word){ aii[word].forEach(function(p){ pos.push({w:word,p:p}); }); }); pos.sort(function(a,b){return a.p-b.p;}); return pos.map(function(x){return x.w;}).join(' '); }catch(e){return '';} })(w.abstract_inverted_index),
     doi: doi, arxiv: arxiv,
     seed: isSeed||false,
     cluster: -1,
@@ -926,8 +926,9 @@ function paConvertWork(w, isSeed){
 }
 
 async function paFetchByKeyword(q){
-  var url = PA_OA+'/works?search='+encodeURIComponent(q)+'&per-page=8&select=id,display_name,publication_year,cited_by_count,authorships,abstract,doi,referenced_works,locations&mailto=paperatlas@example.com';
+  var url = PA_OA+'/works?search='+encodeURIComponent(q)+'&per-page=8&select=id,display_name,publication_year,cited_by_count,authorships,doi,referenced_works,abstract_inverted_index,locations&mailto=paperatlas@example.com';
   var r = await fetch(url);
+  if(!r.ok){ var e=await r.json().catch(function(){return{};}); throw new Error('検索エラー (HTTP '+r.status+'): '+(e.error||'')); }
   var d = await r.json();
   return (d.results||[]).map(function(w){ return paConvertWork(w,true); }).filter(Boolean);
 }
@@ -936,13 +937,13 @@ async function paFetchByTitleOrDOI(q){
   // DOI check
   var dm = q.match(/10\.\d{4,}[\/.].+/);
   if(dm){
-    var url = PA_OA+'/works/https://doi.org/'+encodeURIComponent(dm[0])+'?select=id,display_name,publication_year,cited_by_count,authorships,abstract,doi,referenced_works,locations&mailto=paperatlas@example.com';
+    var url = PA_OA+'/works/https://doi.org/'+dm[0]+'?select=id,display_name,publication_year,cited_by_count,authorships,doi,referenced_works,abstract_inverted_index,locations&mailto=paperatlas@example.com';
     try{ var r=await fetch(url); if(r.ok){ var d=await r.json(); var p=paConvertWork(d,true); if(p) return [p]; } }catch(e){}
   }
   // arXiv check
   var am = q.match(/\d{4}\.\d{4,}/);
   if(am){
-    var url = PA_OA+'/works/https://arxiv.org/abs/'+am[0]+'?select=id,display_name,publication_year,cited_by_count,authorships,abstract,doi,referenced_works,locations&mailto=paperatlas@example.com';
+    var url = PA_OA+'/works/https://arxiv.org/abs/'+am[0]+'?select=id,display_name,publication_year,cited_by_count,authorships,doi,referenced_works,abstract_inverted_index,locations&mailto=paperatlas@example.com';
     try{ var r=await fetch(url); if(r.ok){ var d=await r.json(); var p=paConvertWork(d,true); if(p) return [p]; } }catch(e){}
   }
   return paFetchByKeyword(q);
