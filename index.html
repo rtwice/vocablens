@@ -3,892 +3,1033 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>VocabLens</title>
+<title>ResearchKit</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <script>
   if (typeof pdfjsLib !== 'undefined')
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 </script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Lora:ital,wght@0,400;0,600;1,400&display=swap');
-:root{--bg:#0f0f0f;--surface:#1a1a1a;--surface2:#242424;--border:#2e2e2e;--accent:#c8a96e;--accent2:#7eb8c8;--text:#e8e4dc;--text2:#9a9590;--text3:#5a5652;--danger:#c86e6e;--success:#6ec88a;}
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+/* ════════════════════════════════
+   GLOBAL + APP SHELL
+════════════════════════════════ */
+:root {
+  /* VocabLens dark vars */
+  --vl-bg:#0f0f0f;--vl-surface:#1a1a1a;--vl-surface2:#242424;--vl-border:#2e2e2e;
+  --vl-accent:#c8a96e;--vl-accent2:#7eb8c8;--vl-text:#e8e4dc;--vl-text2:#9a9590;
+  --vl-text3:#5a5652;--vl-danger:#c86e6e;--vl-success:#6ec88a;
+  /* PaperAtlas light vars */
+  --pa-bg:#f5f3ef;--pa-surface:#ffffff;--pa-surface2:#f0ede8;--pa-border:#ddd9d2;
+  --pa-accent:#4a6fa5;--pa-accent2:#2d8a6e;--pa-accent3:#c0392b;
+  --pa-text:#1a1a1a;--pa-text2:#666;--pa-text3:#999;
+  --pa-node1:#4a6fa5;--pa-node2:#c0392b;--pa-node3:#2d8a6e;--pa-node4:#d4841a;
+  --pa-node5:#8e44ad;--pa-node6:#1a7a8a;--pa-node7:#6d7a2d;--pa-node8:#c0612b;
+}
 *{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden;}
-header{display:flex;align-items:center;justify-content:space-between;padding:.65rem 1.25rem;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;flex-wrap:wrap;gap:6px;}
-.logo{font-size:14px;color:var(--accent);letter-spacing:.1em;}
-.logo span{color:var(--text3);}
-.hr{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-.badge{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:2px 10px;font-size:11px;color:var(--text2);}
-.badge b{color:var(--accent);}
-.btn{font-family:'JetBrains Mono',monospace;font-size:11px;padding:5px 12px;border-radius:6px;border:1px solid var(--border);cursor:pointer;background:transparent;color:var(--text2);transition:all .15s;-webkit-appearance:none;}
-.btn:hover{border-color:var(--accent);color:var(--accent);}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:#0f0f0f;font-weight:500;}
-.btn:disabled{opacity:.3;cursor:not-allowed;}
-.main{display:flex;flex:1;overflow:hidden;}
+body{font-family:'JetBrains Mono',monospace;height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden;}
 
+/* ── App Nav ── */
+#app-nav {
+  display:flex;align-items:center;gap:0;
+  background:#111;border-bottom:2px solid #222;
+  flex-shrink:0;padding:0 16px;height:42px;z-index:200;
+}
+.app-logo {
+  font-family:'DM Sans',sans-serif;font-weight:600;font-size:14px;
+  color:#c8a96e;letter-spacing:.05em;margin-right:20px;white-space:nowrap;
+}
+.app-logo em { color:#7eb8c8;font-style:normal; }
+.app-tab {
+  display:flex;align-items:center;gap:7px;
+  padding:0 16px;height:42px;cursor:pointer;
+  font-family:'JetBrains Mono',monospace;font-size:11px;
+  color:#666;border-bottom:2px solid transparent;margin-bottom:-2px;
+  transition:all .2s;white-space:nowrap;background:none;border-left:none;border-right:none;border-top:none;
+}
+.app-tab:hover { color:#aaa; }
+.app-tab.active { color:#c8a96e;border-bottom-color:#c8a96e; }
+.app-tab .tab-dot { width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.6; }
+
+/* ── Pages ── */
+.app-page { display:none;flex:1;overflow:hidden;flex-direction:column; }
+.app-page.active { display:flex; }
+
+/* ════════════════════════════════
+   VOCABLENS (dark, unchanged)
+════════════════════════════════ */
+#page-vocablens {
+  background:var(--vl-bg);color:var(--vl-text);
+  font-family:'JetBrains Mono',monospace;
+}
+#vl-header{display:flex;align-items:center;justify-content:space-between;padding:.65rem 1.25rem;border-bottom:1px solid var(--vl-border);background:var(--vl-surface);flex-shrink:0;flex-wrap:wrap;gap:6px;}
+.vl-logo{font-size:14px;color:var(--vl-accent);letter-spacing:.1em;}
+.vl-logo span{color:var(--vl-text3);}
+.vl-hr{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.vl-badge{background:var(--vl-surface2);border:1px solid var(--vl-border);border-radius:20px;padding:2px 10px;font-size:11px;color:var(--vl-text2);}
+.vl-badge b{color:var(--vl-accent);}
+.vl-btn{font-family:'JetBrains Mono',monospace;font-size:11px;padding:5px 12px;border-radius:6px;border:1px solid var(--vl-border);cursor:pointer;background:transparent;color:var(--vl-text2);transition:all .15s;-webkit-appearance:none;}
+.vl-btn:hover{border-color:var(--vl-accent);color:var(--vl-accent);}
+.vl-btn.primary{background:var(--vl-accent);border-color:var(--vl-accent);color:#0f0f0f;font-weight:500;}
+.vl-btn:disabled{opacity:.3;cursor:not-allowed;}
+#vl-main{display:flex;flex:1;overflow:hidden;}
 /* Upload */
-#upload-pane{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;}
-.drop-zone{width:100%;max-width:440px;border:1.5px dashed var(--border);border-radius:16px;padding:3rem 2rem;text-align:center;cursor:pointer;background:var(--surface);transition:all .2s;}
-.drop-zone:hover,.drop-zone.dragover{border-color:var(--accent);background:#1c1810;}
-.drop-icon{width:48px;height:48px;margin:0 auto 1rem;background:var(--surface2);border-radius:10px;display:flex;align-items:center;justify-content:center;}
-.drop-icon svg{width:22px;height:22px;stroke:var(--accent);fill:none;stroke-width:1.5;}
-.drop-title{font-size:16px;color:var(--text);margin-bottom:6px;font-family:'Lora',serif;}
-.drop-sub{font-size:12px;color:var(--text2);}
-.drop-sub b{color:var(--accent2);}
-.prog-wrap{width:100%;max-width:440px;margin-top:1.25rem;display:none;}
-.prog-label{font-size:11px;color:var(--text2);margin-bottom:5px;}
-.prog-bar{height:2px;background:var(--border);border-radius:2px;overflow:hidden;}
-.prog-fill{height:100%;background:var(--accent);transition:width .3s;width:0%;}
-
+#vl-upload-pane{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;}
+.vl-drop-zone{width:100%;max-width:440px;border:1.5px dashed var(--vl-border);border-radius:16px;padding:3rem 2rem;text-align:center;cursor:pointer;background:var(--vl-surface);transition:all .2s;}
+.vl-drop-zone:hover,.vl-drop-zone.dragover{border-color:var(--vl-accent);background:#1c1810;}
+.vl-drop-icon{width:48px;height:48px;margin:0 auto 1rem;background:var(--vl-surface2);border-radius:10px;display:flex;align-items:center;justify-content:center;}
+.vl-drop-icon svg{width:22px;height:22px;stroke:var(--vl-accent);fill:none;stroke-width:1.5;}
+.vl-drop-title{font-size:16px;color:var(--vl-text);margin-bottom:6px;font-family:'Lora',serif;}
+.vl-drop-sub{font-size:12px;color:var(--vl-text2);}
+.vl-drop-sub b{color:var(--vl-accent2);}
+.vl-prog-wrap{width:100%;max-width:440px;margin-top:1.25rem;display:none;}
+.vl-prog-label{font-size:11px;color:var(--vl-text2);margin-bottom:5px;}
+.vl-prog-bar{height:2px;background:var(--vl-border);border-radius:2px;overflow:hidden;}
+.vl-prog-fill{height:100%;background:var(--vl-accent);transition:width .3s;width:0%;}
 /* Reader */
-#reader-pane{flex:1;display:none;flex-direction:column;overflow:hidden;border-right:1px solid var(--border);}
-.page-nav{display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;font-size:11px;color:var(--text2);flex-wrap:wrap;}
-.page-nav button{background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text2);padding:3px 9px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:11px;-webkit-appearance:none;}
-.page-nav button:disabled{opacity:.3;}
-.hint{margin-left:auto;color:var(--text3);font-size:11px;}
-#canvas-wrap{flex:1;overflow:auto;background:#111;padding:1.5rem;display:flex;justify-content:center;align-items:flex-start;}
-#canvas-scaler{display:inline-block;}
-#page-canvas{display:block;box-shadow:0 4px 32px rgba(0,0,0,.6);border-radius:2px;cursor:crosshair;}
-
+#vl-reader-pane{flex:1;display:none;flex-direction:column;overflow:hidden;border-right:1px solid var(--vl-border);}
+.vl-page-nav{display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--vl-border);background:var(--vl-surface);flex-shrink:0;font-size:11px;color:var(--vl-text2);flex-wrap:wrap;}
+.vl-page-nav button{background:var(--vl-surface2);border:1px solid var(--vl-border);border-radius:5px;color:var(--vl-text2);padding:3px 9px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:11px;-webkit-appearance:none;}
+.vl-page-nav button:disabled{opacity:.3;}
+.vl-hint{margin-left:auto;color:var(--vl-text3);font-size:11px;}
+#vl-canvas-wrap{flex:1;overflow:auto;background:#111;padding:1.5rem;display:flex;justify-content:center;align-items:flex-start;}
+#vl-canvas-scaler{display:inline-block;}
+#vl-page-canvas{display:block;box-shadow:0 4px 32px rgba(0,0,0,.6);border-radius:2px;cursor:crosshair;}
 /* Word picker popup */
-#word-picker{
-  position:fixed;z-index:9000;
-  background:#1c1c1c;border:1px solid #383838;
-  border-radius:10px;padding:4px;
-  min-width:130px;
-  box-shadow:0 8px 28px rgba(0,0,0,.75);
-  display:none;
-  animation:fadeUp .12s ease;
-}
-.wp-item{
-  padding:7px 12px;border-radius:6px;
-  cursor:pointer;font-family:'Lora',serif;
-  font-size:14px;color:var(--text);
-  transition:background .1s;
-  white-space:nowrap;
-}
-.wp-item:hover,.wp-item.active{background:var(--surface2);}
-.wp-item b{color:var(--accent);}
-
+#vl-word-picker{position:fixed;z-index:9000;background:#1c1c1c;border:1px solid #383838;border-radius:10px;padding:4px;min-width:130px;box-shadow:0 8px 28px rgba(0,0,0,.75);display:none;animation:vlFadeUp .12s ease;}
+.vl-wp-item{padding:7px 12px;border-radius:6px;cursor:pointer;font-family:'Lora',serif;font-size:14px;color:var(--vl-text);transition:background .1s;white-space:nowrap;}
+.vl-wp-item:hover,.vl-wp-item.active{background:var(--vl-surface2);}
+.vl-wp-item b{color:var(--vl-accent);}
 /* Definition popup */
-#word-popup{
-  position:fixed;z-index:9001;
-  background:#1c1c1c;border:1px solid #383838;
-  border-radius:12px;padding:1rem 1.1rem;
-  width:320px;max-width:calc(100vw - 24px);
-  max-height:calc(100vh - 32px);overflow-y:auto;
-  box-shadow:0 12px 40px rgba(0,0,0,.75);
-  display:none;animation:fadeUp .15s ease;
-  user-select:none;
-}
-@keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
-.pw{font-family:'Lora',serif;font-size:20px;font-weight:600;color:var(--accent);margin-bottom:2px;}
-.pp{font-size:11px;color:var(--text3);margin-bottom:10px;}
-.pmeaning{margin-bottom:9px;}
-.pmnum{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;color:var(--accent);margin-bottom:3px;}
-.pmtag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;border-radius:4px;padding:1px 6px;margin-bottom:3px;margin-left:3px;}
-.pmtag.d{background:#1a2a1a;border:1px solid #2a3a2a;color:#6ec88a;}
-.pmtag.f{background:#1a1a2a;border:1px solid #2a2a4a;color:var(--accent2);}
-.pmdef{font-family:'Lora',serif;font-size:14px;line-height:1.75;color:var(--text);}
-.pex{font-size:12px;color:var(--text2);font-style:italic;border-left:2px solid var(--border);padding-left:8px;margin-top:4px;line-height:1.6;}
-.pnote{font-size:12px;color:var(--text2);line-height:1.6;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);}
-.pload{font-size:12px;color:var(--text2);padding:6px 0;display:flex;align-items:center;gap:8px;}
-.spinner{width:14px;height:14px;border:1.5px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;}
-@keyframes spin{to{transform:rotate(360deg)}}
-.pa{display:flex;gap:8px;justify-content:flex-end;margin-top:8px;}
-.pbtn{font-family:'JetBrains Mono',monospace;font-size:11px;padding:6px 14px;border-radius:6px;border:1px solid var(--border);cursor:pointer;background:transparent;color:var(--text2);-webkit-appearance:none;}
-.pbtn.save{background:var(--accent);border-color:var(--accent);color:#0f0f0f;font-weight:500;}
-.pbtn.saved{background:var(--surface2);border-color:var(--success);color:var(--success);}
-
+#vl-word-popup{position:fixed;z-index:9001;background:#1c1c1c;border:1px solid #383838;border-radius:12px;padding:1rem 1.1rem;width:320px;max-width:calc(100vw - 24px);max-height:calc(100vh - 32px);overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,.75);display:none;animation:vlFadeUp .15s ease;user-select:none;}
+@keyframes vlFadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.vl-pw{font-family:'Lora',serif;font-size:20px;font-weight:600;color:var(--vl-accent);margin-bottom:2px;}
+.vl-pp{font-size:11px;color:var(--vl-text3);margin-bottom:10px;}
+.vl-pmeaning{margin-bottom:9px;}
+.vl-pmnum{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;background:var(--vl-surface2);border:1px solid var(--vl-border);border-radius:4px;padding:1px 6px;color:var(--vl-accent);margin-bottom:3px;}
+.vl-pmtag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;border-radius:4px;padding:1px 6px;margin-bottom:3px;margin-left:3px;}
+.vl-pmtag.d{background:#1a2a1a;border:1px solid #2a3a2a;color:#6ec88a;}
+.vl-pmtag.f{background:#1a1a2a;border:1px solid #2a2a4a;color:var(--vl-accent2);}
+.vl-pmdef{font-family:'Lora',serif;font-size:14px;line-height:1.75;color:var(--vl-text);}
+.vl-pex{font-size:12px;color:var(--vl-text2);font-style:italic;border-left:2px solid var(--vl-border);padding-left:8px;margin-top:4px;line-height:1.6;}
+.vl-pnote{font-size:12px;color:var(--vl-text2);line-height:1.6;margin-top:8px;padding-top:8px;border-top:1px solid var(--vl-border);}
+.vl-pload{font-size:12px;color:var(--vl-text2);padding:6px 0;display:flex;align-items:center;gap:8px;}
+.vl-spinner,.pa-spinner{border-radius:50%;animation:vlSpin .7s linear infinite;flex-shrink:0;}
+.vl-spinner{width:14px;height:14px;border:1.5px solid var(--vl-border);border-top-color:var(--vl-accent);}
+@keyframes vlSpin{to{transform:rotate(360deg)}}
+.vl-pa{display:flex;gap:8px;justify-content:flex-end;margin-top:8px;}
+.vl-pbtn{font-family:'JetBrains Mono',monospace;font-size:11px;padding:6px 14px;border-radius:6px;border:1px solid var(--vl-border);cursor:pointer;background:transparent;color:var(--vl-text2);-webkit-appearance:none;}
+.vl-pbtn.save{background:var(--vl-accent);border-color:var(--vl-accent);color:#0f0f0f;font-weight:500;}
+.vl-pbtn.saved{background:var(--vl-surface2);border-color:var(--vl-success);color:var(--vl-success);}
 /* Vocab pane */
-#vocab-pane{width:280px;min-width:240px;display:none;flex-direction:column;background:var(--surface);border-left:1px solid var(--border);}
-.vh{padding:.75rem 1rem;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3);letter-spacing:.1em;}
-#vocab-list{flex:1;overflow-y:auto;}
-.vi{padding:.65rem 1rem;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:8px;}
-.vi:hover{background:var(--surface2);}
-.viw{font-family:'Lora',serif;font-size:14px;font-weight:600;color:var(--accent);margin-bottom:2px;}
-.vid{font-size:11px;color:var(--text2);line-height:1.5;}
-.vdel{background:none;border:none;color:var(--text3);cursor:pointer;font-size:15px;flex-shrink:0;padding:0;}
-.vempty{padding:2rem 1rem;text-align:center;font-size:11px;color:var(--text3);line-height:2;}
-.vfoot{padding:.75rem 1rem;border-top:1px solid var(--border);}
+#vl-vocab-pane{width:280px;min-width:240px;display:none;flex-direction:column;background:var(--vl-surface);border-left:1px solid var(--vl-border);}
+.vl-vh{padding:.75rem 1rem;border-bottom:1px solid var(--vl-border);font-size:11px;color:var(--vl-text3);letter-spacing:.1em;}
+#vl-vocab-list{flex:1;overflow-y:auto;}
+.vl-vi{padding:.65rem 1rem;border-bottom:1px solid var(--vl-border);display:flex;align-items:flex-start;gap:8px;}
+.vl-vi:hover{background:var(--vl-surface2);}
+.vl-viw{font-family:'Lora',serif;font-size:14px;font-weight:600;color:var(--vl-accent);margin-bottom:2px;}
+.vl-vid{font-size:11px;color:var(--vl-text2);line-height:1.5;}
+.vl-vdel{background:none;border:none;color:var(--vl-text3);cursor:pointer;font-size:15px;flex-shrink:0;padding:0;}
+.vl-vempty{padding:2rem 1rem;text-align:center;font-size:11px;color:var(--vl-text3);line-height:2;}
+.vl-vfoot{padding:.75rem 1rem;border-top:1px solid var(--vl-border);}
 ::-webkit-scrollbar{width:3px;}
-::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
-@media(max-width:600px){#vocab-pane{display:none!important;}}
+::-webkit-scrollbar-thumb{background:#444;border-radius:3px;}
+@media(max-width:600px){#vl-vocab-pane{display:none!important;}}
+
+/* ════════════════════════════════
+   PAPERATLAS (light mode)
+════════════════════════════════ */
+#page-paperatlas {
+  background:var(--pa-bg);color:var(--pa-text);
+  font-family:'DM Sans',sans-serif;
+}
+#pa-header {
+  display:flex;align-items:center;gap:12px;
+  padding:10px 18px;
+  border-bottom:1px solid var(--pa-border);
+  background:var(--pa-surface);
+  flex-shrink:0;flex-wrap:wrap;gap:8px;
+  box-shadow:0 1px 3px rgba(0,0,0,.06);
+}
+.pa-logo {
+  font-family:'DM Sans',sans-serif;font-weight:600;font-size:16px;
+  color:var(--pa-accent);letter-spacing:-.3px;white-space:nowrap;
+}
+.pa-logo span { color:var(--pa-accent2); }
+.pa-logo em { font-style:normal;font-size:10px;color:var(--pa-text3);font-family:'JetBrains Mono',monospace; }
+.pa-search-area { display:flex;gap:8px;flex:1;max-width:680px; }
+.pa-type {
+  display:flex;background:var(--pa-surface2);
+  border:1px solid var(--pa-border);border-radius:7px;overflow:hidden;flex-shrink:0;
+}
+.pa-type button {
+  padding:7px 13px;background:none;border:none;
+  color:var(--pa-text2);font-family:'JetBrains Mono',monospace;
+  font-size:11px;cursor:pointer;transition:all .15s;white-space:nowrap;
+}
+.pa-type button.active { background:var(--pa-accent);color:#fff; }
+#pa-search-input {
+  flex:1;padding:8px 13px;
+  background:var(--pa-surface2);border:1px solid var(--pa-border);
+  border-radius:7px;color:var(--pa-text);
+  font-family:'DM Sans',sans-serif;font-size:13px;outline:none;
+  transition:border-color .15s;
+}
+#pa-search-input:focus { border-color:var(--pa-accent); }
+#pa-search-btn {
+  padding:8px 20px;background:var(--pa-accent);border:none;
+  border-radius:7px;color:#fff;font-family:'DM Sans',sans-serif;
+  font-size:13px;font-weight:500;cursor:pointer;
+  transition:all .15s;white-space:nowrap;
+}
+#pa-search-btn:hover { background:#3a5f95;transform:translateY(-1px);box-shadow:0 2px 8px rgba(74,111,165,.3); }
+#pa-search-btn:disabled { opacity:.45;cursor:not-allowed;transform:none;box-shadow:none; }
+.pa-stat {
+  font-family:'JetBrains Mono',monospace;font-size:11px;
+  color:var(--pa-text3);padding:4px 10px;
+  border:1px solid var(--pa-border);border-radius:20px;
+  background:var(--pa-surface);white-space:nowrap;
+}
+.pa-stat span { color:var(--pa-accent); }
+/* Main layout */
+#pa-main { display:flex;flex:1;overflow:hidden; }
+/* Sidebar */
+#pa-sidebar {
+  width:290px;background:var(--pa-surface);
+  border-right:1px solid var(--pa-border);
+  display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;
+}
+.pa-sidebar-hd {
+  padding:12px 16px 9px;border-bottom:1px solid var(--pa-border);
+  font-family:'JetBrains Mono',monospace;font-size:10px;
+  color:var(--pa-text3);letter-spacing:.1em;
+}
+#pa-paper-detail { flex:1;overflow-y:auto;padding:15px; }
+#pa-paper-detail::-webkit-scrollbar{width:3px;}
+#pa-paper-detail::-webkit-scrollbar-thumb{background:var(--pa-border);}
+.pa-empty {
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;height:100%;gap:10px;
+  color:var(--pa-text3);text-align:center;
+}
+.pa-empty .ico { font-size:36px;opacity:.25; }
+.pa-empty p { font-size:12px;line-height:1.7;max-width:190px;color:var(--pa-text3); }
+.pa-card { animation:paFadeIn .25s ease; }
+@keyframes paFadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.pa-card-title { font-size:14px;font-weight:500;line-height:1.55;margin-bottom:9px;color:var(--pa-text); }
+.pa-card-meta { display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px; }
+.pa-tag {
+  font-family:'JetBrains Mono',monospace;font-size:10px;
+  padding:2px 8px;border-radius:4px;border:1px solid var(--pa-border);color:var(--pa-text2);
+}
+.pa-tag.yr { border-color:var(--pa-accent);color:var(--pa-accent);background:#eef2f8; }
+.pa-tag.ct { border-color:var(--pa-accent2);color:var(--pa-accent2);background:#e8f5f1; }
+.pa-tag.sd { border-color:#d4841a;color:#d4841a;background:#fdf4e7; }
+.pa-card-authors { font-size:11px;color:var(--pa-text2);margin-bottom:9px;line-height:1.4; }
+.pa-card-abstract {
+  font-size:12px;line-height:1.75;color:#555;
+  margin-bottom:12px;max-height:130px;overflow-y:auto;
+  border-left:2px solid var(--pa-border);padding-left:9px;
+}
+.pa-card-abstract::-webkit-scrollbar{width:3px;}
+.pa-card-links { display:flex;gap:7px; }
+.pa-card-links a {
+  font-family:'JetBrains Mono',monospace;font-size:10px;
+  color:var(--pa-accent);text-decoration:none;padding:4px 10px;
+  border:1px solid var(--pa-border);border-radius:4px;transition:all .15s;
+}
+.pa-card-links a:hover { background:var(--pa-accent);color:#fff;border-color:var(--pa-accent); }
+.pa-divider { border:none;border-top:1px solid var(--pa-border);margin:12px 0; }
+.pa-section-lbl {
+  font-family:'JetBrains Mono',monospace;font-size:10px;
+  color:var(--pa-text3);letter-spacing:.08em;margin-bottom:7px;
+}
+.pa-ref-list { display:flex;flex-direction:column;gap:5px; }
+.pa-ref-item {
+  font-size:11px;color:var(--pa-text2);padding:6px 9px;
+  background:var(--pa-surface2);border-radius:5px;
+  border-left:2px solid var(--pa-border);cursor:pointer;
+  transition:all .15s;line-height:1.4;
+}
+.pa-ref-item:hover { border-left-color:var(--pa-accent);color:var(--pa-text);background:#eef2f8; }
+/* Graph */
+#pa-graph-wrap { flex:1;position:relative;overflow:hidden;background:var(--pa-bg); }
+#pa-graph-svg { width:100%;height:100%; }
+#pa-graph-svg .pa-link { stroke:rgba(100,100,120,.18);stroke-width:1; }
+#pa-graph-svg .pa-link.hl { stroke:rgba(74,111,165,.55);stroke-width:2; }
+#pa-graph-svg .pa-node circle { cursor:pointer;transition:filter .15s; }
+#pa-graph-svg .pa-node circle:hover { filter:brightness(.88); }
+#pa-graph-svg .pa-node.selected circle { stroke:#1a1a1a;stroke-width:2.5; }
+#pa-graph-svg .pa-node.seed circle { stroke:#1a1a1a;stroke-width:2.5; }
+#pa-graph-svg .pa-node text {
+  pointer-events:none;font-family:'DM Sans',sans-serif;
+  font-size:9.5px;fill:#333;
+}
+/* Welcome */
+#pa-welcome {
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:18px;z-index:5;
+  background:var(--pa-bg);
+}
+#pa-welcome.hidden { display:none; }
+.pa-welcome-title {
+  font-family:'DM Sans',sans-serif;font-size:28px;font-weight:600;
+  color:var(--pa-text);letter-spacing:-.5px;
+}
+.pa-welcome-title span { color:var(--pa-accent); }
+.pa-welcome-desc { font-size:13px;color:var(--pa-text2);text-align:center;line-height:1.8;max-width:380px; }
+.pa-welcome-chips { display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:500px; }
+.pa-chip {
+  font-family:'JetBrains Mono',monospace;font-size:11px;
+  padding:6px 13px;background:var(--pa-surface);
+  border:1px solid var(--pa-border);border-radius:20px;
+  color:var(--pa-text2);cursor:pointer;transition:all .15s;
+}
+.pa-chip:hover { border-color:var(--pa-accent);color:var(--pa-accent);transform:translateY(-1px);box-shadow:0 2px 8px rgba(74,111,165,.12); }
+/* Overlay */
+#pa-overlay {
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:14px;
+  background:rgba(245,243,239,.88);z-index:50;backdrop-filter:blur(3px);
+}
+#pa-overlay.hidden { display:none; }
+.pa-loader {
+  width:36px;height:36px;border:2px solid var(--pa-border);
+  border-top-color:var(--pa-accent);border-radius:50%;
+  animation:vlSpin .8s linear infinite;
+}
+#pa-overlay p { font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--pa-text2); }
+/* Legend */
+#pa-legend {
+  position:absolute;top:13px;right:13px;
+  background:var(--pa-surface);border:1px solid var(--pa-border);
+  border-radius:8px;padding:11px 13px;max-width:200px;
+  max-height:280px;overflow-y:auto;z-index:10;
+  display:none;box-shadow:0 2px 12px rgba(0,0,0,.07);
+}
+.pa-legend-title { font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--pa-text3);letter-spacing:.1em;margin-bottom:7px; }
+.pa-legend-item { display:flex;align-items:center;gap:7px;margin-bottom:5px;cursor:pointer;padding:2px 3px;border-radius:4px; }
+.pa-legend-item:hover { background:var(--pa-surface2); }
+.pa-legend-dot { width:9px;height:9px;border-radius:50%;flex-shrink:0; }
+.pa-legend-lbl { font-size:10px;color:var(--pa-text2);line-height:1.35; }
+/* Controls */
+.pa-graph-ctrl {
+  position:absolute;bottom:13px;right:13px;
+  display:flex;flex-direction:column;gap:5px;z-index:10;
+}
+.pa-ctrl-btn {
+  width:30px;height:30px;background:var(--pa-surface);
+  border:1px solid var(--pa-border);border-radius:6px;
+  color:var(--pa-text2);font-size:15px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .15s;box-shadow:0 1px 4px rgba(0,0,0,.07);
+}
+.pa-ctrl-btn:hover { border-color:var(--pa-accent);color:var(--pa-accent); }
+/* Tooltip */
+#pa-tooltip {
+  position:absolute;background:var(--pa-surface);border:1px solid var(--pa-border);
+  border-radius:8px;padding:9px 13px;font-size:12px;max-width:250px;
+  pointer-events:none;z-index:100;display:none;line-height:1.5;
+  box-shadow:0 4px 16px rgba(0,0,0,.1);
+}
+#pa-tooltip strong { display:block;font-size:12px;margin-bottom:3px;color:var(--pa-text); }
+#pa-tooltip .pa-tt-meta { font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--pa-text2); }
+.pa-error {
+  background:#fef0f0;border:1px solid #f5c6c6;border-radius:6px;
+  padding:10px 13px;font-size:12px;color:#c0392b;margin-top:8px;
+}
 </style>
 </head>
 <body>
-<header>
-  <div class="logo">Vocab<span>Lens</span></div>
-  <div class="hr">
-    <input type="password" id="apikey-input" placeholder="sk-ant-..." style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 10px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11px;outline:none;width:180px;">
-    <button class="btn" id="btn-save-key">保存</button>
-    <span id="key-status" style="font-size:11px;display:none;"></span>
-    <div class="badge">saved: <b id="count">0</b></div>
-    <button class="btn" id="reset-btn" style="display:none">← new</button>
-    <button class="btn primary" id="csv-btn" disabled>CSV</button>
-  </div>
-</header>
 
-<div class="main">
-  <div id="upload-pane">
-    <div class="drop-zone" id="drop-zone">
-      <div class="drop-icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg></div>
-      <div class="drop-title">ファイルをドロップ</div>
-      <div class="drop-sub" style="margin-top:6px"><b>PDF</b> または <b>画像</b>（複数可）</div>
-      <div class="drop-sub" style="margin-top:4px;color:var(--text3)">JPG · PNG · WEBP · PDF</div>
-    </div>
-    <input type="file" id="file-input" multiple accept=".pdf,image/*" style="display:none">
-    <div class="prog-wrap" id="prog-wrap">
-      <div class="prog-label" id="prog-label">読み込み中...</div>
-      <div class="prog-bar"><div class="prog-fill" id="prog-fill"></div></div>
+<!-- ── App Navigation ── -->
+<nav id="app-nav">
+  <div class="app-logo">Research<em style="color:#888;font-family:JetBrains Mono;font-size:11px">Kit</em></div>
+  <button class="app-tab active" data-page="vocablens">
+    <span class="tab-dot"></span>VocabLens
+  </button>
+  <button class="app-tab" data-page="paperatlas">
+    <span class="tab-dot"></span>PaperAtlas
+  </button>
+</nav>
+
+<!-- ════════════════ VOCABLENS PAGE ════════════════ -->
+<div id="page-vocablens" class="app-page active">
+  <div id="vl-header">
+    <div class="vl-logo">Vocab<span>Lens</span></div>
+    <div class="vl-hr">
+      <input type="password" id="vl-apikey-input" placeholder="sk-ant-..." style="background:var(--vl-surface2);border:1px solid var(--vl-border);border-radius:6px;padding:4px 10px;color:var(--vl-text);font-family:'JetBrains Mono',monospace;font-size:11px;outline:none;width:180px;">
+      <button class="vl-btn" id="vl-btn-save-key">保存</button>
+      <span id="vl-key-status" style="font-size:11px;display:none;"></span>
+      <div class="vl-badge">saved: <b id="vl-count">0</b></div>
+      <button class="vl-btn" id="vl-reset-btn" style="display:none">← new</button>
+      <button class="vl-btn primary" id="vl-csv-btn" disabled>CSV</button>
     </div>
   </div>
 
-  <div id="reader-pane">
-    <div class="page-nav">
-      <button id="prev-btn" disabled>← prev</button>
-      <span id="page-info">1 / 1</span>
-      <button id="next-btn" disabled>next →</button>
-      <span style="color:var(--text3);font-size:11px;">zoom</span>
-      <input type="range" id="zoom-slider" min="30" max="200" value="100" step="5" style="width:80px;accent-color:var(--accent);">
-      <span id="zoom-label" style="font-size:11px;color:var(--text2);min-width:32px;">100%</span>
-      <span class="hint">単語をクリック → 意味</span>
-      <div style="display:flex;align-items:center;gap:4px;margin-left:8px;">
-        <input type="text" id="search-input" placeholder="単語を検索..." style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 8px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11px;outline:none;width:120px;" />
-        <button id="search-btn" class="btn" style="padding:3px 8px;font-size:11px;">調べる</button>
+  <div id="vl-main">
+    <div id="vl-upload-pane">
+      <div class="vl-drop-zone" id="vl-drop-zone">
+        <div class="vl-drop-icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg></div>
+        <div class="vl-drop-title">ファイルをドロップ</div>
+        <div class="vl-drop-sub" style="margin-top:6px"><b>PDF</b> または <b>画像</b>（複数可）</div>
+        <div class="vl-drop-sub" style="margin-top:4px;color:var(--vl-text3)">JPG · PNG · WEBP · PDF</div>
+      </div>
+      <input type="file" id="vl-file-input" multiple accept=".pdf,image/*" style="display:none">
+      <div class="vl-prog-wrap" id="vl-prog-wrap">
+        <div class="vl-prog-label" id="vl-prog-label">読み込み中...</div>
+        <div class="vl-prog-bar"><div class="vl-prog-fill" id="vl-prog-fill"></div></div>
       </div>
     </div>
-    <div id="canvas-wrap">
-      <div id="canvas-scaler">
-        <canvas id="page-canvas"></canvas>
+
+    <div id="vl-reader-pane">
+      <div class="vl-page-nav">
+        <button id="vl-prev-btn" disabled>← prev</button>
+        <span id="vl-page-info">1 / 1</span>
+        <button id="vl-next-btn" disabled>next →</button>
+        <span style="color:var(--vl-text3);font-size:11px;">zoom</span>
+        <input type="range" id="vl-zoom-slider" min="30" max="200" value="100" step="5" style="width:80px;accent-color:var(--vl-accent);">
+        <span id="vl-zoom-label" style="font-size:11px;color:var(--vl-text2);min-width:32px;">100%</span>
+        <span class="vl-hint">単語をクリック → 意味</span>
+        <div style="display:flex;align-items:center;gap:4px;margin-left:8px;">
+          <input type="text" id="vl-search-input" placeholder="単語を検索..." style="background:var(--vl-surface2);border:1px solid var(--vl-border);border-radius:6px;padding:3px 8px;color:var(--vl-text);font-family:'JetBrains Mono',monospace;font-size:11px;outline:none;width:120px;" />
+          <button id="vl-search-btn" class="vl-btn" style="padding:3px 8px;font-size:11px;">調べる</button>
+        </div>
       </div>
+      <div id="vl-canvas-wrap">
+        <div id="vl-canvas-scaler">
+          <canvas id="vl-page-canvas"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div id="vl-vocab-pane">
+      <div class="vl-vh">WORD LIST</div>
+      <div id="vl-vocab-list"><div class="vl-vempty" id="vl-vempty">単語をクリックして保存しよう</div></div>
+      <div class="vl-vfoot"><button class="vl-btn primary" style="width:100%" id="vl-csv-dl-btn">CSV ダウンロード</button></div>
     </div>
   </div>
 
-  <div id="vocab-pane">
-    <div class="vh">WORD LIST</div>
-    <div id="vocab-list"><div class="vempty" id="vempty">単語をクリックして保存しよう</div></div>
-    <div class="vfoot"><button class="btn primary" style="width:100%" id="csv-dl-btn">CSV ダウンロード</button></div>
+  <div id="vl-word-picker"></div>
+  <div id="vl-word-popup">
+    <div id="vl-popup-handle" style="height:20px;margin:-1rem -1.1rem .5rem;border-radius:12px 12px 0 0;display:flex;align-items:center;justify-content:center;cursor:grab;flex-shrink:0;">
+      <div style="width:36px;height:4px;background:var(--vl-border);border-radius:2px;"></div>
+    </div>
+    <div class="vl-pw" id="vl-pw"></div>
+    <div class="vl-pp" id="vl-pp"></div>
+    <div id="vl-pbody"><div class="vl-pload"><div class="vl-spinner"></div>調べています...</div></div>
+    <div class="vl-pa" id="vl-pa" style="display:none">
+      <button class="vl-pbtn" id="vl-btn-close-popup">閉じる</button>
+      <button class="vl-pbtn save" id="vl-btn-save-word">+ 保存</button>
+    </div>
   </div>
 </div>
 
-<!-- Word picker popup -->
-<div id="word-picker"></div>
-
-<!-- Definition popup -->
-<div id="word-popup">
-  <div id="popup-handle" style="height:20px;margin:-1rem -1.1rem .5rem;border-radius:12px 12px 0 0;display:flex;align-items:center;justify-content:center;cursor:grab;flex-shrink:0;">
-    <div style="width:36px;height:4px;background:var(--border);border-radius:2px;"></div>
+<!-- ════════════════ PAPERATLAS PAGE ════════════════ -->
+<div id="page-paperatlas" class="app-page">
+  <div id="pa-header">
+    <div class="pa-logo">Paper<span>Atlas</span> <em>β</em></div>
+    <div class="pa-search-area">
+      <div class="pa-type">
+        <button class="active" id="pa-btn-kw" onclick="paSetMode('keyword')">キーワード</button>
+        <button id="pa-btn-doi" onclick="paSetMode('doi')">タイトル / DOI</button>
+      </div>
+      <input id="pa-search-input" type="text" placeholder="例: hippocampus place cells spatial navigation" onkeydown="if(event.key==='Enter')paSearch()"/>
+      <button id="pa-search-btn" onclick="paSearch()">検索 →</button>
+    </div>
+    <div style="display:flex;gap:6px;margin-left:auto;flex-shrink:0;">
+      <div class="pa-stat">ノード: <span id="pa-node-count">0</span></div>
+      <div class="pa-stat">エッジ: <span id="pa-edge-count">0</span></div>
+    </div>
   </div>
-  <div class="pw" id="pw"></div>
-  <div class="pp" id="pp"></div>
-  <div id="pbody"><div class="pload"><div class="spinner"></div>調べています...</div></div>
-  <div class="pa" id="pa" style="display:none">
-    <button class="pbtn" id="btn-close-popup">閉じる</button>
-    <button class="pbtn save" id="btn-save-word">+ 保存</button>
+
+  <div id="pa-main">
+    <div id="pa-sidebar">
+      <div class="pa-sidebar-hd">PAPER DETAIL</div>
+      <div id="pa-paper-detail">
+        <div class="pa-empty">
+          <div class="ico">◎</div>
+          <p>論文ノードをクリックすると詳細が表示されます</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="pa-graph-wrap">
+      <svg id="pa-graph-svg"></svg>
+
+      <div id="pa-welcome">
+        <div class="pa-welcome-title">Paper<span>Atlas</span></div>
+        <div class="pa-welcome-desc">キーワードまたは論文タイトル・DOIを入力して<br>引用ネットワークを可視化しましょう</div>
+        <div class="pa-welcome-chips">
+          <span class="pa-chip" onclick="paUseExample('attention is all you need')">attention is all you need</span>
+          <span class="pa-chip" onclick="paUseExample('hippocampus place cells navigation')">hippocampus place cells</span>
+          <span class="pa-chip" onclick="paUseExample('CRISPR gene editing')">CRISPR gene editing</span>
+          <span class="pa-chip" onclick="paUseExample('transformer language model')">transformer language model</span>
+          <span class="pa-chip" onclick="paUseExample('diffusion models image generation')">diffusion models</span>
+          <span class="pa-chip" onclick="paUseExample('reinforcement learning reward')">reinforcement learning</span>
+        </div>
+      </div>
+
+      <div id="pa-overlay" class="hidden">
+        <div class="pa-loader"></div>
+        <p id="pa-overlay-msg">論文を検索中...</p>
+      </div>
+
+      <div id="pa-legend"><div class="pa-legend-title">CLUSTERS</div><div id="pa-legend-items"></div></div>
+
+      <div class="pa-graph-ctrl">
+        <button class="pa-ctrl-btn" onclick="paZoomIn()">＋</button>
+        <button class="pa-ctrl-btn" onclick="paZoomOut()">－</button>
+        <button class="pa-ctrl-btn" onclick="paResetZoom()">⊙</button>
+      </div>
+
+      <div id="pa-tooltip"></div>
+    </div>
   </div>
 </div>
 
+<!-- ════════════════════════════════════════
+  SCRIPTS
+════════════════════════════════════════ -->
 <script>
-var API_URL = 'https://api.anthropic.com/v1/messages';
-console.log('[VocabLens] version: 2026-03-28-v3');
-
-// ── Supabase ──
-var SB_URL = 'https://xmpogxfqrryablfribzm.supabase.co';
-var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhtcG9neGZxcnJ5YWJsZnJpYnptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2OTkzNTgsImV4cCI6MjA5MDI3NTM1OH0.eXWMq1mVV-ekuofHhGyI6U6XV66WyaFfDpKButa6KUY';
-
-function sbFetch(path, method, body) {
-  return fetch(SB_URL + '/rest/v1/' + path, {
-    method: method || 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      'apikey': SB_KEY,
-      'Authorization': 'Bearer ' + SB_KEY,
-      'Prefer': method === 'POST' ? 'return=minimal' : ''
-    },
-    body: body ? JSON.stringify(body) : undefined
-  });
-}
-
-// 現在の資料名を取得
-function getCurrentFilename() {
-  if (!pages.length || currentPage >= pages.length) return '';
-  return pages[currentPage].label.split(' p.')[0];
-}
-
-// 単語をSupabaseに保存
-function sbSaveWord(word, definition, example) {
-  var filename = getCurrentFilename();
-  sbFetch('vocab', 'POST', { word: word, definition: definition, example: example, filename: filename })
-    .then(function(r){ if (!r.ok) console.warn('[SB] save word failed:', r.status); })
-    .catch(function(e){ console.warn('[SB] save word error:', e); });
-}
-
-// 単語リストをSupabaseから取得（現在の資料のみ）
-function sbLoadVocab(filename) {
-  var query = filename
-    ? 'vocab?filename=eq.' + encodeURIComponent(filename) + '&order=created_at.asc'
-    : 'vocab?filename=eq.&order=created_at.asc';
-  return sbFetch(query)
-    .then(function(r){ return r.json(); })
-    .then(function(data){
-      if (!Array.isArray(data)) return;
-      vocabList = data.map(function(v){ return { word: v.word, definition: v.definition || '', example: v.example || '', sbId: v.id }; });
-      updateVocabUI();
-      console.log('[SB] loaded', vocabList.length, 'words for:', filename || '(none)');
-    })
-    .catch(function(e){ console.warn('[SB] load vocab error:', e); });
-}
-
-// 単語をSupabaseから削除
-function sbDeleteWord(sbId) {
-  if (!sbId) return;
-  sbFetch('vocab?id=eq.' + sbId, 'DELETE')
-    .catch(function(e){ console.warn('[SB] delete error:', e); });
-}
-
-// 読書進捗を保存
-function sbSaveProgress(filename, page, total) {
-  sbFetch('progress?filename=eq.' + encodeURIComponent(filename), 'DELETE')
-    .then(function(){
-      return sbFetch('progress', 'POST', { filename: filename, page: page, total: total });
-    })
-    .catch(function(e){ console.warn('[SB] save progress error:', e); });
-}
-
-// 読書進捗を取得
-function sbLoadProgress() {
-  return sbFetch('progress?order=updated_at.desc')
-    .then(function(r){ return r.json(); })
-    .catch(function(){ return []; });
-}
-var DICT_SYSTEM = 'You are an English dictionary for a Japanese reader. Respond ONLY in valid JSON (no markdown, no preamble): {"word":"string","phonetic":"IPA","meanings":[{"sense":"短い日本語ラベル","tag":"一般/IT/医学/etc.","definition":"一文の日本語説明"}],"note":"補足 or null","example":"one English sentence"}. Include 2-5 meanings.';
-
-var pages = [], currentPage = 0, vocabList = [];
-var currentWord = '', currentDef = '', currentEx = '';
-var apiKey = '';
-var clickX = 0, clickY = 0;
-var zoomLevel = 100;
-
-document.addEventListener('DOMContentLoaded', function() {
-  document.getElementById('btn-save-key').addEventListener('click', saveApiKey);
-  document.getElementById('btn-close-popup').addEventListener('click', closePopup);
-  document.getElementById('btn-save-word').addEventListener('click', saveWord);
-  document.getElementById('reset-btn').addEventListener('click', resetApp);
-  document.getElementById('csv-btn').addEventListener('click', exportCSV);
-  document.getElementById('csv-dl-btn').addEventListener('click', exportCSV);
-  document.getElementById('prev-btn').addEventListener('click', function(){ changePage(-1); });
-  document.getElementById('search-btn').addEventListener('click', doSearch);
-  document.getElementById('search-input').addEventListener('keydown', function(e){ if(e.key==='Enter') doSearch(); });
-  document.getElementById('next-btn').addEventListener('click', function(){ changePage(1); });
-  document.getElementById('zoom-slider').addEventListener('input', function(){ setZoom(parseInt(this.value)); });
-
-  var dz = document.getElementById('drop-zone');
-  var fi = document.getElementById('file-input');
-  dz.addEventListener('click', function(){ fi.click(); });
-  dz.addEventListener('dragover', function(e){ e.preventDefault(); dz.classList.add('dragover'); });
-  dz.addEventListener('dragleave', function(){ dz.classList.remove('dragover'); });
-  dz.addEventListener('drop', function(e){ e.preventDefault(); dz.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
-  fi.addEventListener('change', function(){ handleFiles(fi.files); });
-
-  document.getElementById('canvas-wrap').addEventListener('click', onCanvasClick);
-  initTouch();
-  initPopupDrag();
-
-  document.addEventListener('keydown', function(e){
-    if (e.key === 'Escape') { closePopup(); closePicker(); }
-  });
-
-  // 起動時は進捗履歴だけ読み込む（単語は資料ロード時に読む）
-  sbLoadProgress().then(function(history){
-    if (history && history.length > 0) showHistory(history);
-  });
-  document.addEventListener('mousedown', function(e) {
-    var picker = document.getElementById('word-picker');
-    var popup  = document.getElementById('word-popup');
-    if (picker.style.display !== 'none' && !picker.contains(e.target)) closePicker();
-    if (popup.style.display  !== 'none' && !popup.contains(e.target) && !e.target.closest('#canvas-wrap')) closePopup();
+// ══════════════════════════════════════
+// TAB NAVIGATION
+// ══════════════════════════════════════
+document.querySelectorAll('.app-tab').forEach(function(tab){
+  tab.addEventListener('click', function(){
+    document.querySelectorAll('.app-tab').forEach(function(t){ t.classList.remove('active'); });
+    document.querySelectorAll('.app-page').forEach(function(p){ p.classList.remove('active'); });
+    tab.classList.add('active');
+    document.getElementById('page-' + tab.dataset.page).classList.add('active');
   });
 });
 
-// ── API Key ──
-function saveApiKey() {
-  var k = document.getElementById('apikey-input').value.trim();
-  if (!k.startsWith('sk-ant-')) { showKeyStatus('sk-ant- で始まるキーを入力してください', 'var(--danger)'); return; }
-  apiKey = k;
-  showKeyStatus('✓ セット完了', 'var(--success)');
-}
-function getApiKey() { return apiKey || document.getElementById('apikey-input').value.trim(); }
-function showKeyStatus(msg, color) {
-  var el = document.getElementById('key-status');
-  el.style.display = 'inline'; el.style.color = color; el.textContent = msg;
-}
+// ══════════════════════════════════════
+// VOCABLENS
+// ══════════════════════════════════════
+var VL_API = 'https://api.anthropic.com/v1/messages';
+var VL_DICT_SYSTEM = 'You are an English dictionary for a Japanese reader. Respond ONLY in valid JSON (no markdown, no preamble): {"word":"string","phonetic":"IPA","meanings":[{"sense":"短い日本語ラベル","tag":"一般/IT/医学/etc.","definition":"一文の日本語説明"}],"note":"補足 or null","example":"one English sentence"}. Include 2-5 meanings.';
 
-// ── Files ──
-function handleFiles(files) {
-  if (!files || !files.length) return;
-  pages = [];
-  setProgress('読み込み中...', 10);
-  var arr = Array.prototype.slice.call(files);
-  var idx = 0;
-  function next() {
-    if (idx >= arr.length) { setProgress('完了 — ' + pages.length + 'ページ', 100); setTimeout(showReader, 400); return; }
-    var f = arr[idx++];
-    setProgress('処理中: ' + f.name + ' (' + idx + '/' + arr.length + ')', 10 + (idx/arr.length)*85);
-    if (f.type === 'application/pdf') loadPDF(f).then(next);
-    else if (f.type.startsWith('image/')) loadImage(f).then(next);
+var SB_URL = 'https://xmpogxfqrryablfribzm.supabase.co';
+var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhtcG9neGZxcnJ5YWJsZnJpYnptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2OTkzNTgsImV4cCI6MjA5MDI3NTM1OH0.eXWMq1mVV-ekuofHhGyI6U6XV66WyaFfDpKButa6KUY';
+
+function sbFetch(path,method,body){
+  return fetch(SB_URL+'/rest/v1/'+path,{method:method||'GET',headers:{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Prefer':method==='POST'?'return=minimal':''},body:body?JSON.stringify(body):undefined});
+}
+function vlGetFilename(){ return (vlPages.length&&vlCurrentPage<vlPages.length)?vlPages[vlCurrentPage].label.split(' p.')[0]:''; }
+function sbSaveWord(word,def,ex){ sbFetch('vocab','POST',{word:word,definition:def,example:ex,filename:vlGetFilename()}).catch(function(){}); }
+function sbLoadVocab(filename){
+  var q=filename?'vocab?filename=eq.'+encodeURIComponent(filename)+'&order=created_at.asc':'vocab?filename=eq.&order=created_at.asc';
+  return sbFetch(q).then(function(r){return r.json();}).then(function(data){
+    if(!Array.isArray(data))return;
+    vlVocabList=data.map(function(v){return{word:v.word,definition:v.definition||'',example:v.example||'',sbId:v.id};});
+    vlUpdateVocabUI();
+  }).catch(function(){});
+}
+function sbDeleteWord(id){ if(id) sbFetch('vocab?id=eq.'+id,'DELETE').catch(function(){}); }
+function sbSaveProgress(fn,pg,tot){ sbFetch('progress?filename=eq.'+encodeURIComponent(fn),'DELETE').then(function(){ return sbFetch('progress','POST',{filename:fn,page:pg,total:tot}); }).catch(function(){}); }
+function sbLoadProgress(){ return sbFetch('progress?order=updated_at.desc').then(function(r){return r.json();}).catch(function(){return[];}); }
+
+var vlPages=[], vlCurrentPage=0, vlVocabList=[];
+var vlCurrentWord='', vlCurrentDef='', vlCurrentEx='';
+var vlApiKey='';
+var vlClickX=0, vlClickY=0, vlZoom=100;
+
+document.addEventListener('DOMContentLoaded', function(){
+  document.getElementById('vl-btn-save-key').addEventListener('click', vlSaveApiKey);
+  document.getElementById('vl-btn-close-popup').addEventListener('click', vlClosePopup);
+  document.getElementById('vl-btn-save-word').addEventListener('click', vlSaveWord);
+  document.getElementById('vl-reset-btn').addEventListener('click', vlResetApp);
+  document.getElementById('vl-csv-btn').addEventListener('click', vlExportCSV);
+  document.getElementById('vl-csv-dl-btn').addEventListener('click', vlExportCSV);
+  document.getElementById('vl-prev-btn').addEventListener('click', function(){ vlChangePage(-1); });
+  document.getElementById('vl-next-btn').addEventListener('click', function(){ vlChangePage(1); });
+  document.getElementById('vl-zoom-slider').addEventListener('input', function(){ vlSetZoom(parseInt(this.value)); });
+  document.getElementById('vl-search-btn').addEventListener('click', vlDoSearch);
+  document.getElementById('vl-search-input').addEventListener('keydown', function(e){ if(e.key==='Enter') vlDoSearch(); });
+
+  var dz=document.getElementById('vl-drop-zone');
+  var fi=document.getElementById('vl-file-input');
+  dz.addEventListener('click', function(){ fi.click(); });
+  dz.addEventListener('dragover', function(e){ e.preventDefault(); dz.classList.add('dragover'); });
+  dz.addEventListener('dragleave', function(){ dz.classList.remove('dragover'); });
+  dz.addEventListener('drop', function(e){ e.preventDefault(); dz.classList.remove('dragover'); vlHandleFiles(e.dataTransfer.files); });
+  fi.addEventListener('change', function(){ vlHandleFiles(fi.files); });
+
+  document.getElementById('vl-canvas-wrap').addEventListener('click', vlOnCanvasClick);
+  vlInitTouch(); vlInitPopupDrag();
+
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ vlClosePopup(); vlClosePicker(); } });
+  document.addEventListener('mousedown', function(e){
+    var pk=document.getElementById('vl-word-picker');
+    var pp=document.getElementById('vl-word-popup');
+    if(pk.style.display!=='none'&&!pk.contains(e.target)) vlClosePicker();
+    if(pp.style.display!=='none'&&!pp.contains(e.target)&&!e.target.closest('#vl-canvas-wrap')) vlClosePopup();
+  });
+  sbLoadProgress().then(function(h){ if(h&&h.length) vlShowHistory(h); });
+});
+
+function vlSaveApiKey(){
+  var k=document.getElementById('vl-apikey-input').value.trim();
+  if(!k.startsWith('sk-ant-')){vlShowKeyStatus('sk-ant- で始まるキーを入力してください','var(--vl-danger)');return;}
+  vlApiKey=k; vlShowKeyStatus('✓ セット完了','var(--vl-success)');
+}
+function vlGetApiKey(){ return vlApiKey||document.getElementById('vl-apikey-input').value.trim(); }
+function vlShowKeyStatus(msg,color){ var el=document.getElementById('vl-key-status'); el.style.display='inline'; el.style.color=color; el.textContent=msg; }
+
+function vlHandleFiles(files){
+  if(!files||!files.length) return;
+  vlPages=[]; vlSetProgress('読み込み中...',10);
+  var arr=Array.prototype.slice.call(files), idx=0;
+  function next(){
+    if(idx>=arr.length){ vlSetProgress('完了 — '+vlPages.length+'ページ',100); setTimeout(vlShowReader,400); return; }
+    var f=arr[idx++];
+    vlSetProgress('処理中: '+f.name+' ('+idx+'/'+arr.length+')',10+(idx/arr.length)*85);
+    if(f.type==='application/pdf') vlLoadPDF(f).then(next);
+    else if(f.type.startsWith('image/')) vlLoadImage(f).then(next);
     else next();
   }
   next();
 }
 
-function loadPDF(file) {
-  return file.arrayBuffer().then(function(ab) {
-    return pdfjsLib.getDocument({ data: ab }).promise;
-  }).then(function(pdf) {
-    var chain = Promise.resolve();
-    for (var p = 1; p <= pdf.numPages; p++) {
-      (function(pageNum) {
-        chain = chain.then(function() {
-          return pdf.getPage(pageNum).then(function(page) {
-            var scale = 2;
-            var vp = page.getViewport({ scale: scale });
-            var c = document.createElement('canvas');
-            c.width = vp.width; c.height = vp.height;
-            return page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise.then(function() {
-              return page.getTextContent().then(function(tc) {
-                var words = extractWords(tc, vp);
-                pages.push({ dataUrl: c.toDataURL('image/jpeg', 0.92), label: file.name + ' p.' + pageNum, words: words, hasText: words.length > 5 });
-              });
-            });
+function vlLoadPDF(file){
+  return file.arrayBuffer().then(function(ab){ return pdfjsLib.getDocument({data:ab}).promise; }).then(function(pdf){
+    var chain=Promise.resolve();
+    for(var p=1;p<=pdf.numPages;p++){
+      (function(pn){ chain=chain.then(function(){ return pdf.getPage(pn).then(function(pg){
+        var scale=2, vp=pg.getViewport({scale:scale});
+        var c=document.createElement('canvas'); c.width=vp.width; c.height=vp.height;
+        return pg.render({canvasContext:c.getContext('2d'),viewport:vp}).promise.then(function(){
+          return pg.getTextContent().then(function(tc){
+            var words=vlExtractWords(tc,vp);
+            vlPages.push({dataUrl:c.toDataURL('image/jpeg',.92),label:file.name+' p.'+pn,words:words,hasText:words.length>5});
           });
         });
-      })(p);
+      }); }); })(p);
     }
     return chain;
   });
 }
 
-function extractWords(tc, vp) {
-  var words = [];
-  for (var i = 0; i < tc.items.length; i++) {
-    var item = tc.items[i];
-    if (!item.str.trim()) continue;
-    var t = pdfjsLib.Util.transform(vp.transform, item.transform);
-    var x = t[4], y = t[5];
-    var fontH = Math.abs(t[3]);
-    var itemW = item.width * Math.abs(vp.transform[0]);
-    var top = y - fontH;
-    // Split keeping whitespace to track offsets accurately
-    var tokens = item.str.split(/(\s+)/);
-    var charW = itemW / Math.max(item.str.length, 1);
-    var offsetX = 0;
-    for (var j = 0; j < tokens.length; j++) {
-      var tok = tokens[j];
-      if (!tok) continue;
-      var tokW = tok.length * charW;
-      if (!/^\s+$/.test(tok)) {
-        var clean = tok.replace(/[^a-zA-Z'-]/g, '');
-        if (clean.length >= 2) {
-          words.push({ word: clean, raw: tok, x: x + offsetX, y: top, w: tokW, h: fontH });
-        }
-      }
-      offsetX += tokW;
+function vlExtractWords(tc,vp){
+  var words=[];
+  for(var i=0;i<tc.items.length;i++){
+    var item=tc.items[i]; if(!item.str.trim()) continue;
+    var t=pdfjsLib.Util.transform(vp.transform,item.transform);
+    var x=t[4],y=t[5],fontH=Math.abs(t[3]),itemW=item.width*Math.abs(vp.transform[0]);
+    var top=y-fontH, tokens=item.str.split(/(\s+)/), charW=itemW/Math.max(item.str.length,1), offsetX=0;
+    for(var j=0;j<tokens.length;j++){
+      var tok=tokens[j]; if(!tok) continue;
+      var tokW=tok.length*charW;
+      if(!/^\s+$/.test(tok)){ var clean=tok.replace(/[^a-zA-Z'-]/g,''); if(clean.length>=2) words.push({word:clean,raw:tok,x:x+offsetX,y:top,w:tokW,h:fontH}); }
+      offsetX+=tokW;
     }
   }
   return words;
 }
 
-function loadImage(file) {
-  return new Promise(function(resolve) {
-    var reader = new FileReader();
-    reader.onload = function(e) { pages.push({ dataUrl: e.target.result, label: file.name, words: [], hasText: false }); resolve(); };
-    reader.readAsDataURL(file);
-  });
+function vlLoadImage(file){
+  return new Promise(function(res){ var r=new FileReader(); r.onload=function(e){ vlPages.push({dataUrl:e.target.result,label:file.name,words:[],hasText:false}); res(); }; r.readAsDataURL(file); });
 }
 
-// ── Reader ──
-function showReader() {
-  document.getElementById('upload-pane').style.display = 'none';
-  document.getElementById('reader-pane').style.display = 'flex';
-  document.getElementById('vocab-pane').style.display = 'flex';
-  document.getElementById('reset-btn').style.display = 'inline-block';
-  renderPage(0);
-  // 資料の単語リストを読み込む
-  var filename = pages.length ? pages[0].label.split(' p.')[0] : '';
-  vocabList = [];
-  updateVocabUI();
-  sbLoadVocab(filename);
-  // WORD LISTヘッダーに資料名を表示
-  var shortName = filename.length > 24 ? filename.substring(0,24)+'…' : filename;
-  document.querySelector('.vh').textContent = 'WORD LIST — ' + shortName;
+function vlShowReader(){
+  document.getElementById('vl-upload-pane').style.display='none';
+  document.getElementById('vl-reader-pane').style.display='flex';
+  document.getElementById('vl-vocab-pane').style.display='flex';
+  document.getElementById('vl-reset-btn').style.display='inline-block';
+  vlRenderPage(0);
+  var fn=vlPages.length?vlPages[0].label.split(' p.')[0]:'';
+  vlVocabList=[]; vlUpdateVocabUI();
+  sbLoadVocab(fn);
+  var sh=fn.length>24?fn.substring(0,24)+'…':fn;
+  document.querySelector('.vl-vh').textContent='WORD LIST — '+sh;
 }
 
-function renderPage(idx) {
-  currentPage = idx;
-  document.getElementById('page-info').textContent = (idx+1) + ' / ' + pages.length;
-  document.getElementById('prev-btn').disabled = idx === 0;
-  document.getElementById('next-btn').disabled = idx === pages.length - 1;
-  closePopup(); closePicker();
-  // 進捗を保存
-  if (pages[idx]) sbSaveProgress(pages[idx].label.split(' p.')[0], idx+1, pages.length);
-  var canvas = document.getElementById('page-canvas');
-  var img = new Image();
-  img.onload = function() {
-    canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
-    canvas.style.width = ''; canvas.style.height = '';
-    canvas.getContext('2d').drawImage(img, 0, 0);
-    requestAnimationFrame(applyZoom);
+function vlRenderPage(idx){
+  vlCurrentPage=idx;
+  document.getElementById('vl-page-info').textContent=(idx+1)+' / '+vlPages.length;
+  document.getElementById('vl-prev-btn').disabled=idx===0;
+  document.getElementById('vl-next-btn').disabled=idx===vlPages.length-1;
+  vlClosePopup(); vlClosePicker();
+  if(vlPages[idx]) sbSaveProgress(vlPages[idx].label.split(' p.')[0],idx+1,vlPages.length);
+  var canvas=document.getElementById('vl-page-canvas');
+  var img=new Image(); img.onload=function(){ canvas.width=img.naturalWidth; canvas.height=img.naturalHeight; canvas.style.width=''; canvas.style.height=''; canvas.getContext('2d').drawImage(img,0,0); requestAnimationFrame(vlApplyZoom); }; img.src=vlPages[idx].dataUrl;
+}
+function vlChangePage(dir){ var n=vlCurrentPage+dir; if(n>=0&&n<vlPages.length) vlRenderPage(n); }
+function vlSetZoom(v){ vlZoom=v; document.getElementById('vl-zoom-label').textContent=v+'%'; vlApplyZoom(); }
+function vlApplyZoom(){ var c=document.getElementById('vl-page-canvas'); if(!c.width) return; c.style.width=Math.round(c.width*vlZoom/200)+'px'; c.style.height='auto'; }
+
+function vlOnCanvasClick(e){
+  if(document.getElementById('vl-word-popup').contains(e.target)) return;
+  if(document.getElementById('vl-word-picker').contains(e.target)) return;
+  var canvas=document.getElementById('vl-page-canvas');
+  var rect=canvas.getBoundingClientRect();
+  if(e.clientX<rect.left||e.clientX>rect.right||e.clientY<rect.top||e.clientY>rect.bottom){ vlClosePopup(); vlClosePicker(); return; }
+  vlClickX=e.clientX; vlClickY=e.clientY;
+  var cx=(e.clientX-rect.left)*(canvas.width/rect.width);
+  var cy=(e.clientY-rect.top)*(canvas.height/rect.height);
+  vlHandleWordAt(cx,cy,canvas);
+}
+
+function vlHandleWordAt(cx,cy,canvas){
+  var pg=vlPages[vlCurrentPage];
+  if(pg.hasText&&pg.words.length>0){ var cands=vlGetNearbyWords(pg.words,cx,cy,5); if(cands.length>0){ vlShowPicker(cands,canvas); return; } }
+  var cw=400,ch=150,cx0=Math.max(0,cx-cw/2),cy0=Math.max(0,cy-ch/2);
+  var cw2=Math.min(canvas.width-cx0,cw),ch2=Math.min(canvas.height-cy0,ch);
+  var crop=document.createElement('canvas'); crop.width=cw2; crop.height=ch2;
+  crop.getContext('2d').drawImage(canvas,cx0,cy0,cw2,ch2,0,0,cw2,ch2);
+  vlGetImageCandidates(crop.toDataURL('image/jpeg',.92),canvas);
+}
+
+function vlGetImageCandidates(dataUrl,canvas){
+  var key=vlGetApiKey();
+  if(!key){ vlShowPopup(vlClickX,vlClickY); vlShowError('APIキーを入力して「保存」を押してください'); return; }
+  var picker=document.getElementById('vl-word-picker');
+  picker.innerHTML='<div class="vl-wp-item" style="color:var(--vl-text2);font-family:sans-serif;font-size:11px;display:flex;align-items:center;gap:8px;"><div class="vl-spinner"></div>読み取り中...</div>';
+  var m=8,pw=160,left=vlClickX+12,top=vlClickY-20;
+  if(left+pw>window.innerWidth-m) left=vlClickX-pw-12;
+  left=Math.max(m,Math.min(left,window.innerWidth-pw-m)); top=Math.max(m,Math.min(top,window.innerHeight-60-m));
+  picker.style.left=left+'px'; picker.style.top=top+'px'; picker.style.display='block';
+  var xhr=new XMLHttpRequest();
+  xhr.open('POST',VL_API,true);
+  xhr.setRequestHeader('Content-Type','application/json');
+  xhr.setRequestHeader('anthropic-version','2023-06-01');
+  xhr.setRequestHeader('anthropic-dangerous-direct-browser-access','true');
+  xhr.setRequestHeader('x-api-key',key);
+  xhr.onload=function(){
+    try{
+      var data=JSON.parse(xhr.responseText);
+      if(data.error){ vlClosePicker(); vlShowPopup(vlClickX,vlClickY); vlShowError(data.error.message||'APIエラー'); return; }
+      var raw=(data.content&&data.content[0]?data.content[0].text:'[]').replace(/```json|```/g,'').trim();
+      var words=JSON.parse(raw);
+      if(!Array.isArray(words)||words.length===0){ vlClosePicker(); vlShowPopup(vlClickX,vlClickY); vlShowError('単語が見つかりませんでした'); return; }
+      vlShowPicker(words.slice(0,5).map(function(w){return{word:w,raw:w,x:0,y:0,w:0,h:0};}),canvas);
+    }catch(e){ vlClosePicker(); vlShowPopup(vlClickX,vlClickY); vlShowError('レスポンス解析エラー'); }
   };
-  img.src = pages[idx].dataUrl;
+  xhr.onerror=function(){ vlClosePicker(); vlShowPopup(vlClickX,vlClickY); vlShowError('通信エラー'); };
+  xhr.send(JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:200,system:'Extract English words from the image near the center. Respond ONLY with a valid JSON array of strings (no markdown, no explanation). Example: ["methodology","applied","research"]. List 3-5 English words closest to the center of the image.',messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:dataUrl.split(',')[1]}},{type:'text',text:'List the English words near the center of this image as a JSON array.'}]}]}));
 }
 
-function changePage(dir) {
-  var next = currentPage + dir;
-  if (next >= 0 && next < pages.length) renderPage(next);
-}
-
-function setZoom(val) {
-  zoomLevel = val;
-  document.getElementById('zoom-label').textContent = val + '%';
-  applyZoom();
-}
-
-function applyZoom() {
-  var canvas = document.getElementById('page-canvas');
-  if (!canvas.width) return;
-  canvas.style.width  = Math.round(canvas.width  * zoomLevel / 200) + 'px';
-  canvas.style.height = 'auto';
-}
-
-// ── Click ──
-function onCanvasClick(e) {
-  if (document.getElementById('word-popup').contains(e.target)) return;
-  if (document.getElementById('word-picker').contains(e.target)) return;
-  var canvas = document.getElementById('page-canvas');
-  var rect = canvas.getBoundingClientRect();
-  if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) { closePopup(); closePicker(); return; }
-  var scaleX = canvas.width / rect.width;
-  var scaleY = canvas.height / rect.height;
-  clickX = e.clientX; clickY = e.clientY;
-  var cx = (e.clientX - rect.left) * scaleX;
-  var cy = (e.clientY - rect.top)  * scaleY;
-  handleWordAt(cx, cy, canvas);
-}
-
-function handleWordAt(cx, cy, canvas) {
-  var pg = pages[currentPage];
-  if (pg.hasText && pg.words.length > 0) {
-    var candidates = getNearbyWords(pg.words, cx, cy, 5);
-    if (candidates.length > 0) { showPicker(candidates, canvas); return; }
-  }
-  // Image fallback: crop and ask AI for word candidates
-  var cw = 400, ch = 150;
-  var cx0 = Math.max(0, cx-cw/2), cy0 = Math.max(0, cy-ch/2);
-  var cw2 = Math.min(canvas.width-cx0, cw), ch2 = Math.min(canvas.height-cy0, ch);
-  var crop = document.createElement('canvas');
-  crop.width = cw2; crop.height = ch2;
-  crop.getContext('2d').drawImage(canvas, cx0, cy0, cw2, ch2, 0, 0, cw2, ch2);
-  getImageCandidates(crop.toDataURL('image/jpeg', 0.92), canvas);
-}
-
-function getImageCandidates(dataUrl, canvas) {
-  var key = getApiKey();
-  if (!key) { showPopup(clickX, clickY); showError('APIキーを入力して「保存」を押してください'); return; }
-  // Show a small loading indicator in picker position
-  var picker = document.getElementById('word-picker');
-  picker.innerHTML = '<div class="wp-item" style="color:var(--text2);font-family:sans-serif;font-size:11px;display:flex;align-items:center;gap:8px;"><div class="spinner"></div>読み取り中...</div>';
-  var m = 8, pw = 160;
-  var left = clickX + 12, top = clickY - 20;
-  if (left + pw > window.innerWidth - m) left = clickX - pw - 12;
-  left = Math.max(m, Math.min(left, window.innerWidth - pw - m));
-  top  = Math.max(m, Math.min(top,  window.innerHeight - 60 - m));
-  picker.style.left = left + 'px'; picker.style.top = top + 'px';
-  picker.style.display = 'block';
-
-  var xhr = new XMLHttpRequest();
-  xhr.open('POST', API_URL, true);
-  xhr.setRequestHeader('Content-Type', 'application/json');
-  xhr.setRequestHeader('anthropic-version', '2023-06-01');
-  xhr.setRequestHeader('anthropic-dangerous-direct-browser-access', 'true');
-  xhr.setRequestHeader('x-api-key', key);
-  xhr.onload = function() {
-    try {
-      var data = JSON.parse(xhr.responseText);
-      if (data.error) { closePicker(); showPopup(clickX, clickY); showError(data.error.message || 'APIエラー'); return; }
-      var raw = (data.content&&data.content[0]?data.content[0].text:'[]').replace(/```json|```/g,'').trim();
-      var words = JSON.parse(raw);
-      if (!Array.isArray(words) || words.length === 0) {
-        closePicker(); showPopup(clickX, clickY); showError('単語が見つかりませんでした');return;
-      }
-      // Build fake word objects for showPicker
-      var candidates = words.slice(0,5).map(function(w){ return { word: w, raw: w, x:0, y:0, w:0, h:0 }; });
-      showPicker(candidates, canvas);
-    } catch(e) { closePicker(); showPopup(clickX, clickY); showError('レスポンス解析エラー'); }
-  };
-  xhr.onerror = function() { closePicker(); showPopup(clickX, clickY); showError('通信エラー'); };
-  xhr.send(JSON.stringify({
-    model: 'claude-sonnet-4-20250514', max_tokens: 200,
-    system: 'Extract English words from the image near the center. Respond ONLY with a valid JSON array of strings (no markdown, no explanation). Example: ["methodology","applied","research"]. List 3-5 English words closest to the center of the image.',
-    messages:[{role:'user',content:[
-      {type:'image',source:{type:'base64',media_type:'image/jpeg',data:dataUrl.split(',')[1]}},
-      {type:'text',text:'List the English words near the center of this image as a JSON array.'}
-    ]}]
-  }));
-}
-
-function getNearbyWords(words, cx, cy, n) {
-  var bestLineY = null, bestLineDist = Infinity;
-  for (var i = 0; i < words.length; i++) {
-    var wcy = words[i].y + words[i].h / 2;
-    if (Math.abs(cy - wcy) < bestLineDist) { bestLineDist = Math.abs(cy - wcy); bestLineY = wcy; }
-  }
-  var lineWords = [];
-  for (var i = 0; i < words.length; i++) {
-    var wcy = words[i].y + words[i].h / 2;
-    if (Math.abs(wcy - bestLineY) < words[i].h * 1.2) {
-      lineWords.push({ w: words[i], dx: Math.abs(cx - (words[i].x + words[i].w / 2)) });
-    }
-  }
-  lineWords.sort(function(a, b){ return a.dx - b.dx; });
-  var seen = {}, result = [];
-  for (var i = 0; i < lineWords.length && result.length < n; i++) {
-    var word = lineWords[i].w.word;
-    if (!seen[word]) { seen[word] = true; result.push(lineWords[i].w); }
-  }
+function vlGetNearbyWords(words,cx,cy,n){
+  var bestY=null,bestD=Infinity;
+  for(var i=0;i<words.length;i++){ var wcy=words[i].y+words[i].h/2; if(Math.abs(cy-wcy)<bestD){bestD=Math.abs(cy-wcy);bestY=wcy;} }
+  var line=[];
+  for(var i=0;i<words.length;i++){ var wcy=words[i].y+words[i].h/2; if(Math.abs(wcy-bestY)<words[i].h*1.2) line.push({w:words[i],dx:Math.abs(cx-(words[i].x+words[i].w/2))}); }
+  line.sort(function(a,b){return a.dx-b.dx;});
+  var seen={},result=[];
+  for(var i=0;i<line.length&&result.length<n;i++){ var word=line[i].w.word; if(!seen[word]){seen[word]=true;result.push(line[i].w);} }
   return result;
 }
 
-// ── Picker popup ──
-function showPicker(candidates, canvas) {
-  closePicker();
-  var picker = document.getElementById('word-picker');
-  picker.innerHTML = '';
-  candidates.forEach(function(w) {
-    var item = document.createElement('div');
-    item.className = 'wp-item';
-    item.innerHTML = '<b>' + w.word + '</b>';
-    item.addEventListener('click', function(e) {
-      e.stopPropagation();
-      closePicker();
-      highlightWord(w, canvas);
-      showPopup(clickX + 8, clickY);
-      lookupByText(w.word);
-    });
-    item.addEventListener('touchend', function(e) {
-      e.stopPropagation();
-      closePicker();
-      highlightWord(w, canvas);
-      showPopup(clickX + 8, clickY);
-      lookupByText(w.word);
-    });
+function vlShowPicker(cands,canvas){
+  vlClosePicker();
+  var picker=document.getElementById('vl-word-picker'); picker.innerHTML='';
+  cands.forEach(function(w){
+    var item=document.createElement('div'); item.className='vl-wp-item';
+    item.innerHTML='<b>'+w.word+'</b>';
+    item.addEventListener('click',function(e){ e.stopPropagation(); vlClosePicker(); vlHighlightWord(w,canvas); vlShowPopup(vlClickX+8,vlClickY); vlLookupByText(w.word); });
+    item.addEventListener('touchend',function(e){ e.stopPropagation(); vlClosePicker(); vlHighlightWord(w,canvas); vlShowPopup(vlClickX+8,vlClickY); vlLookupByText(w.word); });
     picker.appendChild(item);
   });
-  // Position to the right of click
-  var m = 8;
-  picker.style.display = 'block';
-  var pw = picker.offsetWidth || 140;
-  var ph = picker.offsetHeight || (candidates.length * 36 + 8);
-  var left = clickX + 12;
-  var top  = clickY - ph / 2;
-  if (left + pw > window.innerWidth - m) left = clickX - pw - 12;
-  left = Math.max(m, Math.min(left, window.innerWidth - pw - m));
-  top  = Math.max(m, Math.min(top,  window.innerHeight - ph - m));
-  picker.style.left = left + 'px';
-  picker.style.top  = top + 'px';
+  var m=8; picker.style.display='block';
+  var pw=picker.offsetWidth||140, ph=picker.offsetHeight||(cands.length*36+8);
+  var left=vlClickX+12, top=vlClickY-ph/2;
+  if(left+pw>window.innerWidth-m) left=vlClickX-pw-12;
+  left=Math.max(m,Math.min(left,window.innerWidth-pw-m)); top=Math.max(m,Math.min(top,window.innerHeight-ph-m));
+  picker.style.left=left+'px'; picker.style.top=top+'px';
 }
+function vlClosePicker(){ document.getElementById('vl-word-picker').style.display='none'; }
+function vlHighlightWord(w,canvas){ var ctx=canvas.getContext('2d'); ctx.save(); ctx.fillStyle='rgba(200,169,110,0.4)'; ctx.fillRect(w.x,w.y,w.w,w.h); ctx.restore(); var du=vlPages[vlCurrentPage].dataUrl; setTimeout(function(){var img=new Image();img.onload=function(){ctx.drawImage(img,0,0);};img.src=du;},700); }
 
-function closePicker() {
-  document.getElementById('word-picker').style.display = 'none';
+function vlShowPopup(x,y){
+  vlCurrentWord=''; vlCurrentDef=''; vlCurrentEx='';
+  document.getElementById('vl-pw').textContent=''; document.getElementById('vl-pp').textContent='';
+  document.getElementById('vl-pbody').innerHTML='<div class="vl-pload"><div class="vl-spinner"></div>調べています...</div>';
+  document.getElementById('vl-pa').style.display='none';
+  var popup=document.getElementById('vl-word-popup'); popup.style.display='block'; vlPosPopup(x,y);
 }
-
-function highlightWord(w, canvas) {
-  var ctx = canvas.getContext('2d');
-  ctx.save(); ctx.fillStyle = 'rgba(200,169,110,0.4)';
-  ctx.fillRect(w.x, w.y, w.w, w.h); ctx.restore();
-  var dataUrl = pages[currentPage].dataUrl;
-  setTimeout(function(){ var img = new Image(); img.onload = function(){ ctx.drawImage(img,0,0); }; img.src = dataUrl; }, 700);
+function vlPosPopup(x,y){
+  var popup=document.getElementById('vl-word-popup');
+  var pw=popup.offsetWidth||320, ph=popup.offsetHeight||200, m=10;
+  var left=(x||vlClickX)+14, top=(y||vlClickY)-ph/2;
+  if(left+pw>window.innerWidth-m) left=(x||vlClickX)-pw-14;
+  left=Math.max(m,Math.min(left,window.innerWidth-pw-m)); top=Math.max(m,Math.min(top,window.innerHeight-ph-m));
+  popup.style.left=left+'px'; popup.style.top=top+'px';
 }
+function vlClosePopup(){ document.getElementById('vl-word-popup').style.display='none'; }
 
-// ── Definition popup ──
-function showPopup(x, y) {
-  currentWord = ''; currentDef = ''; currentEx = '';
-  document.getElementById('pw').textContent = '';
-  document.getElementById('pp').textContent = '';
-  document.getElementById('pbody').innerHTML = '<div class="pload"><div class="spinner"></div>調べています...</div>';
-  document.getElementById('pa').style.display = 'none';
-  var popup = document.getElementById('word-popup');
-  popup.style.display = 'block';
-  positionPopup(x, y);
-}
-
-function positionPopup(x, y) {
-  var popup = document.getElementById('word-popup');
-  var pw = popup.offsetWidth || 320;
-  var ph = popup.offsetHeight || 200;
-  var m = 10;
-  var left = (x || clickX) + 14;
-  var top  = (y || clickY) - ph / 2;
-  if (left + pw > window.innerWidth - m) left = (x || clickX) - pw - 14;
-  left = Math.max(m, Math.min(left, window.innerWidth - pw - m));
-  top  = Math.max(m, Math.min(top,  window.innerHeight - ph - m));
-  popup.style.left = left + 'px';
-  popup.style.top  = top + 'px';
-}
-
-function closePopup() { document.getElementById('word-popup').style.display = 'none'; }
-
-// ── API ──
-function callAPI(payload, onSuccess) {
-  var key = getApiKey();
-  if (!key) { showError('APIキーを入力して「保存」を押してください'); return; }
-  var xhr = new XMLHttpRequest();
-  xhr.open('POST', API_URL, true);
-  xhr.setRequestHeader('Content-Type', 'application/json');
-  xhr.setRequestHeader('anthropic-version', '2023-06-01');
-  xhr.setRequestHeader('anthropic-dangerous-direct-browser-access', 'true');
-  xhr.setRequestHeader('x-api-key', key);
-  xhr.onload = function() {
-    try {
-      var data = JSON.parse(xhr.responseText);
-      if (data.error) { showError(data.error.message || 'APIエラー'); return; }
-      onSuccess(data);
-    } catch(ex) { showError('レスポンス解析エラー'); }
-  };
-  xhr.onerror = function() { showError('通信エラー'); };
+function vlCallAPI(payload,onSuccess){
+  var key=vlGetApiKey(); if(!key){vlShowError('APIキーを入力して「保存」を押してください');return;}
+  var xhr=new XMLHttpRequest(); xhr.open('POST',VL_API,true);
+  xhr.setRequestHeader('Content-Type','application/json');
+  xhr.setRequestHeader('anthropic-version','2023-06-01');
+  xhr.setRequestHeader('anthropic-dangerous-direct-browser-access','true');
+  xhr.setRequestHeader('x-api-key',key);
+  xhr.onload=function(){ try{ var d=JSON.parse(xhr.responseText); if(d.error){vlShowError(d.error.message||'APIエラー');return;} onSuccess(d); }catch(ex){vlShowError('レスポンス解析エラー');} };
+  xhr.onerror=function(){vlShowError('通信エラー');};
   xhr.send(JSON.stringify(payload));
 }
+function vlShowError(msg){ document.getElementById('vl-pbody').innerHTML='<div class="vl-pload" style="color:var(--vl-danger)">'+msg+'</div>'; document.getElementById('vl-pa').style.display='flex'; }
 
-function showError(msg) {
-  document.getElementById('pbody').innerHTML = '<div class="pload" style="color:var(--danger)">' + msg + '</div>';
-  document.getElementById('pa').style.display = 'flex';
+function vlLookupByText(word){
+  var cached=vlVocabList.filter(function(v){return v.word.toLowerCase()===word.toLowerCase();})[0];
+  if(cached){ vlCurrentWord=cached.word; vlCurrentDef=cached.definition; vlCurrentEx=cached.example; vlRenderPopupResult({word:cached.word,phonetic:'',meanings:[],note:null,example:cached.example,definition:cached.definition}); return; }
+  vlCallAPI({model:'claude-sonnet-4-20250514',max_tokens:600,system:VL_DICT_SYSTEM,messages:[{role:'user',content:'Define: "'+word+'"'}]},vlRenderResult);
 }
-
-function lookupByText(word) {
-  var cached = vocabList.filter(function(v){ return v.word.toLowerCase() === word.toLowerCase(); })[0];
-  if (cached) {
-    currentWord = cached.word; currentDef = cached.definition; currentEx = cached.example;
-    renderPopupResult({ word: cached.word, phonetic:'', meanings:[], note:null, example: cached.example, definition: cached.definition });
-    return;
-  }
-  callAPI({ model:'claude-sonnet-4-20250514', max_tokens:600, system:DICT_SYSTEM,
-    messages:[{role:'user',content:'Define: "'+word+'"'}] }, renderResult);
+function vlRenderResult(data){ try{ var raw=(data.content&&data.content[0]?data.content[0].text:'{}').replace(/```json|```/g,'').trim(); vlRenderPopupResult(JSON.parse(raw)); }catch(ex){vlShowError('レスポンス解析エラー');} }
+function vlRenderPopupResult(obj){
+  vlCurrentWord=obj.word||''; vlCurrentDef=(obj.meanings||[]).map(function(m){return m.definition;}).join(' / ')||obj.definition||''; vlCurrentEx=obj.example||'';
+  document.getElementById('vl-pw').textContent=vlCurrentWord; document.getElementById('vl-pp').textContent=obj.phonetic||'';
+  var html='';
+  (obj.meanings||[]).forEach(function(m,i){ html+='<div class="vl-pmeaning"><span class="vl-pmnum">'+(i+1)+'</span>'+(m.sense?'<span class="vl-pmtag d">'+m.sense+'</span>':'')+(m.tag?'<span class="vl-pmtag f">'+m.tag+'</span>':'')+'<div class="vl-pmdef">'+m.definition+'</div></div>'; });
+  if((!obj.meanings||!obj.meanings.length)&&(obj.definition||vlCurrentDef)) html='<div class="vl-pmdef">'+(obj.definition||vlCurrentDef)+'</div>';
+  if(obj.note) html+='<div class="vl-pnote">'+obj.note+'</div>';
+  if(obj.example) html+='<div class="vl-pex">'+obj.example+'</div>';
+  document.getElementById('vl-pbody').innerHTML=html;
+  document.getElementById('vl-pa').style.display='flex';
+  var isSaved=vlVocabList.some(function(v){return v.word.toLowerCase()===vlCurrentWord.toLowerCase();});
+  var sb=document.getElementById('vl-btn-save-word'); sb.textContent=isSaved?'✓ 保存済み':'+ 保存'; sb.className=isSaved?'vl-pbtn saved':'vl-pbtn save';
+  requestAnimationFrame(function(){vlPosPopup(vlClickX+14,vlClickY);});
 }
-
-function lookupByImage(dataUrl) {
-  callAPI({ model:'claude-sonnet-4-20250514', max_tokens:600,
-    system: DICT_SYSTEM + ' A cropped image is provided. Identify the English word closest to the center and define it.',
-    messages:[{role:'user',content:[
-      {type:'image',source:{type:'base64',media_type:'image/jpeg',data:dataUrl.split(',')[1]}},
-      {type:'text',text:'What English word is at the center? Define it.'}
-    ]}] }, renderResult);
+function vlSaveWord(){
+  if(!vlCurrentWord||vlVocabList.some(function(v){return v.word.toLowerCase()===vlCurrentWord.toLowerCase();})) return;
+  vlVocabList.push({word:vlCurrentWord,definition:vlCurrentDef,example:vlCurrentEx});
+  sbSaveWord(vlCurrentWord,vlCurrentDef,vlCurrentEx);
+  vlUpdateVocabUI();
+  document.getElementById('vl-btn-save-word').textContent='✓ 保存済み';
+  document.getElementById('vl-btn-save-word').className='vl-pbtn saved';
 }
-
-function renderResult(data) {
-  try {
-    var raw = (data.content && data.content[0] ? data.content[0].text : '{}').replace(/```json|```/g,'').trim();
-    renderPopupResult(JSON.parse(raw));
-  } catch(ex) { showError('レスポンス解析エラー'); }
-}
-
-function renderPopupResult(obj) {
-  currentWord = obj.word || '';
-  currentDef  = (obj.meanings||[]).map(function(m){ return m.definition; }).join(' / ') || obj.definition || '';
-  currentEx   = obj.example || '';
-  document.getElementById('pw').textContent = currentWord;
-  document.getElementById('pp').textContent = obj.phonetic || '';
-  var html = '';
-  (obj.meanings||[]).forEach(function(m,i){
-    html += '<div class="pmeaning"><span class="pmnum">'+(i+1)+'</span>'
-      +(m.sense?'<span class="pmtag d">'+m.sense+'</span>':'')
-      +(m.tag  ?'<span class="pmtag f">'+m.tag  +'</span>':'')
-      +'<div class="pmdef">'+m.definition+'</div></div>';
-  });
-  if ((!obj.meanings||!obj.meanings.length) && (obj.definition||currentDef))
-    html = '<div class="pmdef">'+(obj.definition||currentDef)+'</div>';
-  if (obj.note)    html += '<div class="pnote">'+obj.note+'</div>';
-  if (obj.example) html += '<div class="pex">'+obj.example+'</div>';
-  document.getElementById('pbody').innerHTML = html;
-  document.getElementById('pa').style.display = 'flex';
-  var isSaved = vocabList.some(function(v){ return v.word.toLowerCase() === currentWord.toLowerCase(); });
-  var sb = document.getElementById('btn-save-word');
-  sb.textContent = isSaved ? '✓ 保存済み' : '+ 保存';
-  sb.className = isSaved ? 'pbtn saved' : 'pbtn save';
-  requestAnimationFrame(function(){ positionPopup(clickX + 14, clickY); });
-}
-
-function saveWord() {
-  if (!currentWord || vocabList.some(function(v){ return v.word.toLowerCase() === currentWord.toLowerCase(); })) return;
-  vocabList.push({ word: currentWord, definition: currentDef, example: currentEx });
-  sbSaveWord(currentWord, currentDef, currentEx);
-  updateVocabUI();
-  document.getElementById('btn-save-word').textContent = '✓ 保存済み';
-  document.getElementById('btn-save-word').className = 'pbtn saved';
-}
-
-function updateVocabUI() {
-  var list = document.getElementById('vocab-list');
-  document.getElementById('count').textContent = vocabList.length;
-  document.getElementById('csv-btn').disabled = vocabList.length === 0;
-  document.getElementById('vempty').style.display = vocabList.length ? 'none' : 'block';
-  list.querySelectorAll('.vi').forEach(function(el){ el.remove(); });
-  vocabList.forEach(function(v, i) {
-    var item = document.createElement('div'); item.className = 'vi';
-    // Short definition: first sentence or first 40 chars
-    var shortDef = v.definition ? v.definition.split('。')[0].substring(0, 40) : '';
-    item.innerHTML = '<div style="flex:1;min-width:0"><div class="viw">'+v.word+'</div><div class="vid">'+shortDef+'</div></div>'
-      + '<button class="vdel" data-idx="'+i+'">×</button>';
+function vlUpdateVocabUI(){
+  var list=document.getElementById('vl-vocab-list');
+  document.getElementById('vl-count').textContent=vlVocabList.length;
+  document.getElementById('vl-csv-btn').disabled=vlVocabList.length===0;
+  document.getElementById('vl-vempty').style.display=vlVocabList.length?'none':'block';
+  list.querySelectorAll('.vl-vi').forEach(function(el){el.remove();});
+  vlVocabList.forEach(function(v,i){
+    var item=document.createElement('div'); item.className='vl-vi';
+    var sd=v.definition?v.definition.split('。')[0].substring(0,40):'';
+    item.innerHTML='<div style="flex:1;min-width:0"><div class="vl-viw">'+v.word+'</div><div class="vl-vid">'+sd+'</div></div><button class="vl-vdel" data-idx="'+i+'">×</button>';
     list.appendChild(item);
   });
-  list.querySelectorAll('.vdel').forEach(function(btn){
-    btn.addEventListener('click', function(){ removeWord(parseInt(btn.dataset.idx)); });
-  });
+  list.querySelectorAll('.vl-vdel').forEach(function(btn){ btn.addEventListener('click',function(){vlRemoveWord(parseInt(btn.dataset.idx));}); });
+}
+function vlRemoveWord(idx){ var item=vlVocabList[idx]; if(item&&item.sbId) sbDeleteWord(item.sbId); vlVocabList.splice(idx,1); vlUpdateVocabUI(); }
+function vlExportCSV(){
+  if(!vlVocabList.length) return;
+  var rows=[['単語','意味（日本語）','例文']];
+  vlVocabList.forEach(function(v){rows.push([v.word,v.definition,v.example]);});
+  var csv=rows.map(function(r){return r.map(function(c){return'"'+(c||'').replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+  var a=document.createElement('a'); a.href=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'})); a.download='vocab_list.csv'; a.click();
+}
+function vlSetProgress(msg,pct){ document.getElementById('vl-prog-wrap').style.display='block'; document.getElementById('vl-prog-label').textContent=msg; document.getElementById('vl-prog-fill').style.width=pct+'%'; }
+function vlResetApp(){
+  vlPages=[]; vlCurrentPage=0; vlVocabList=[];
+  vlSetZoom(100); document.getElementById('vl-zoom-slider').value=100;
+  document.getElementById('vl-upload-pane').style.display='flex';
+  document.getElementById('vl-reader-pane').style.display='none';
+  document.getElementById('vl-vocab-pane').style.display='none';
+  document.getElementById('vl-reset-btn').style.display='none';
+  document.getElementById('vl-prog-wrap').style.display='none';
+  document.getElementById('vl-count').textContent='0';
+  document.getElementById('vl-csv-btn').disabled=true;
+  document.getElementById('vl-file-input').value='';
+  vlClosePopup(); vlClosePicker(); vlUpdateVocabUI();
+}
+function vlDoSearch(){ var w=document.getElementById('vl-search-input').value.trim(); if(!w) return; vlClickX=window.innerWidth/2; vlClickY=window.innerHeight/2; vlShowPopup(vlClickX,vlClickY); vlLookupByText(w); document.getElementById('vl-search-input').value=''; }
+function vlShowHistory(history){
+  var existing=document.getElementById('vl-history-section'); if(existing) existing.remove();
+  var sec=document.createElement('div'); sec.id='vl-history-section'; sec.style.cssText='border-top:1px solid var(--vl-border);padding:.75rem 1rem;flex-shrink:0;';
+  sec.innerHTML='<div style="font-size:10px;color:var(--vl-text3);letter-spacing:.1em;margin-bottom:6px;">最近読んだ資料</div>';
+  history.slice(0,5).forEach(function(h){ var row=document.createElement('div'); row.style.cssText='font-size:11px;color:var(--vl-text2);padding:3px 0;display:flex;justify-content:space-between;'; var name=h.filename.length>20?h.filename.substring(0,20)+'…':h.filename; row.innerHTML='<span style="color:var(--vl-text)">'+name+'</span><span>'+h.page+'/'+h.total+'p</span>'; sec.appendChild(row); });
+  var vfoot=document.querySelector('.vl-vfoot'); document.getElementById('vl-vocab-pane').insertBefore(sec,vfoot);
 }
 
-function removeWord(idx) {
-  var item = vocabList[idx];
-  if (item && item.sbId) sbDeleteWord(item.sbId);
-  vocabList.splice(idx,1);
-  updateVocabUI();
+function vlInitTouch(){
+  var wrap=document.getElementById('vl-canvas-wrap');
+  var tX=0,tY=0,tT=0,tMoved=false,tMulti=false,pDist=0,pZoom=100;
+  wrap.addEventListener('touchstart',function(e){ if(e.touches.length>=2){tMulti=true;pDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);pZoom=vlZoom;return;} tX=e.touches[0].clientX;tY=e.touches[0].clientY;tT=Date.now();tMoved=false;tMulti=false; },{passive:true});
+  wrap.addEventListener('touchmove',function(e){ if(e.touches.length>=2){tMulti=true;var d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);var z=Math.round(Math.max(30,Math.min(200,pZoom*d/pDist)));vlSetZoom(z);document.getElementById('vl-zoom-slider').value=z;return;} if(Math.abs(e.touches[0].clientX-tX)>5||Math.abs(e.touches[0].clientY-tY)>5) tMoved=true; },{passive:true});
+  wrap.addEventListener('touchend',function(e){ if(e.touches.length>0) return; if(tMulti){tMulti=false;return;} if(tMoved) return; if(Date.now()-tT>400) return; var tc=e.changedTouches[0]; if(Math.abs(tc.clientX-tX)>10||Math.abs(tc.clientY-tY)>10) return; var canvas=document.getElementById('vl-page-canvas'); var rect=canvas.getBoundingClientRect(); if(tc.clientX<rect.left||tc.clientX>rect.right||tc.clientY<rect.top||tc.clientY>rect.bottom){vlClosePopup();vlClosePicker();return;} vlClickX=tc.clientX;vlClickY=tc.clientY; var cx=(tc.clientX-rect.left)*(canvas.width/rect.width); var cy=(tc.clientY-rect.top)*(canvas.height/rect.height); vlHandleWordAt(cx,cy,canvas); },{passive:true});
+}
+function vlInitPopupDrag(){
+  var popup=document.getElementById('vl-word-popup');
+  var drag=false,sx=0,sy=0,ol=0,ot=0;
+  function startDrag(x,y){drag=true;sx=x;sy=y;ol=parseInt(popup.style.left)||0;ot=parseInt(popup.style.top)||0;}
+  function moveDrag(x,y){if(!drag)return;var m=8;popup.style.left=Math.max(m,Math.min(ol+x-sx,window.innerWidth-popup.offsetWidth-m))+'px';popup.style.top=Math.max(m,Math.min(ot+y-sy,window.innerHeight-popup.offsetHeight-m))+'px';}
+  popup.addEventListener('mousedown',function(e){if(e.target.closest('.vl-pa')||e.target.closest('#vl-pbody'))return;startDrag(e.clientX,e.clientY);e.preventDefault();});
+  document.addEventListener('mousemove',function(e){moveDrag(e.clientX,e.clientY);});
+  document.addEventListener('mouseup',function(){drag=false;});
+  document.getElementById('vl-popup-handle').addEventListener('touchstart',function(e){if(e.touches.length!==1)return;startDrag(e.touches[0].clientX,e.touches[0].clientY);e.stopPropagation();},{passive:true});
+  document.addEventListener('touchmove',function(e){if(!drag)return;moveDrag(e.touches[0].clientX,e.touches[0].clientY);},{passive:true});
+  document.addEventListener('touchend',function(){drag=false;},{passive:true});
 }
 
-function exportCSV() {
-  if (!vocabList.length) return;
-  var rows = [['単語','意味（日本語）','例文']];
-  vocabList.forEach(function(v){ rows.push([v.word, v.definition, v.example]); });
-  var csv = rows.map(function(r){ return r.map(function(c){ return '"'+(c||'').replace(/"/g,'""')+'"'; }).join(','); }).join('\n');
-  var a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'}));
-  a.download = 'vocab_list.csv'; a.click();
+// ══════════════════════════════════════
+// PAPERATLAS
+// ══════════════════════════════════════
+var PA_SS = 'https://api.semanticscholar.org/graph/v1';
+var PA_COLORS = ['#4a6fa5','#c0392b','#2d8a6e','#d4841a','#8e44ad','#1a7a8a','#6d7a2d','#c0612b','#2c3e7a','#7a2c5e'];
+var paData = {nodes:[],links:[]};
+var paMode = 'keyword';
+var paSimulation = null, paZoomBehavior = null;
+var paClickX = 0, paClickY = 0;
+
+function paSetMode(m){
+  paMode=m;
+  document.getElementById('pa-btn-kw').classList.toggle('active',m==='keyword');
+  document.getElementById('pa-btn-doi').classList.toggle('active',m==='doi');
+  document.getElementById('pa-search-input').placeholder = m==='keyword'
+    ? '例: hippocampus place cells spatial navigation'
+    : '例: Attention Is All You Need  または  10.48550/arXiv.1706.03762';
+}
+function paUseExample(q){ paSetMode('keyword'); document.getElementById('pa-search-input').value=q; paSearch(); }
+
+async function paSearch(){
+  var q=document.getElementById('pa-search-input').value.trim(); if(!q) return;
+  paShowOverlay('論文を検索中...'); paHideWelcome();
+  try{
+    var seeds = paMode==='doi' ? await paFetchByTitleOrDOI(q) : await paFetchByKeyword(q);
+    if(!seeds.length) throw new Error('論文が見つかりませんでした');
+    paShowOverlay('引用ネットワークを取得中...');
+    var graph = await paBuildGraph(seeds);
+    paRenderGraph(graph);
+  }catch(e){ paHideOverlay(); paShowDetailError(e.message); }
 }
 
-// ── Touch ──
-function initTouch() {
-  var wrap = document.getElementById('canvas-wrap');
-  var tX=0, tY=0, tT=0, tMoved=false, tMulti=false;
-  var pDist=0, pZoom=100;
-  wrap.addEventListener('touchstart', function(e){
-    if (e.touches.length >= 2) {
-      tMulti = true;
-      pDist = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
-      pZoom = zoomLevel; return;
-    }
-    tX=e.touches[0].clientX; tY=e.touches[0].clientY; tT=Date.now(); tMoved=false; tMulti=false;
-  }, {passive:true});
-  wrap.addEventListener('touchmove', function(e){
-    if (e.touches.length >= 2) {
-      tMulti = true;
-      var d = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
-      var z = Math.round(Math.max(30, Math.min(200, pZoom*d/pDist)));
-      setZoom(z); document.getElementById('zoom-slider').value = z; return;
-    }
-    if (Math.abs(e.touches[0].clientX-tX)>5 || Math.abs(e.touches[0].clientY-tY)>5) tMoved=true;
-  }, {passive:true});
-  wrap.addEventListener('touchend', function(e){
-    if (e.touches.length > 0) return;
-    if (tMulti) { tMulti=false; return; }
-    if (tMoved) return;
-    if (Date.now()-tT > 400) return;
-    var tc = e.changedTouches[0];
-    if (Math.abs(tc.clientX-tX)>10 || Math.abs(tc.clientY-tY)>10) return;
-    var canvas = document.getElementById('page-canvas');
-    var rect = canvas.getBoundingClientRect();
-    if (tc.clientX<rect.left||tc.clientX>rect.right||tc.clientY<rect.top||tc.clientY>rect.bottom) { closePopup(); closePicker(); return; }
-    clickX=tc.clientX; clickY=tc.clientY;
-    var cx=(tc.clientX-rect.left)*(canvas.width/rect.width);
-    var cy=(tc.clientY-rect.top)*(canvas.height/rect.height);
-    handleWordAt(cx, cy, canvas);
-  }, {passive:true});
+async function paFetchByKeyword(q){
+  var r=await fetch(PA_SS+'/paper/search?query='+encodeURIComponent(q)+'&limit=8&fields=paperId,title,year,citationCount,authors,abstract,references,citations,externalIds');
+  var d=await r.json(); return (d.data||[]).filter(function(p){return p.paperId;});
+}
+async function paFetchByTitleOrDOI(q){
+  var dm=q.match(/10\.\d{4,}[\/.].+/);
+  if(dm){ var r=await fetch(PA_SS+'/paper/DOI:'+encodeURIComponent(dm[0])+'?fields=paperId,title,year,citationCount,authors,abstract,references,citations,externalIds'); if(r.ok){var d=await r.json();if(d.paperId)return[d];} }
+  var am=q.match(/\d{4}\.\d{4,}/);
+  if(am){ var r=await fetch(PA_SS+'/paper/ARXIV:'+am[0]+'?fields=paperId,title,year,citationCount,authors,abstract,references,citations,externalIds'); if(r.ok){var d=await r.json();if(d.paperId)return[d];} }
+  return paFetchByKeyword(q);
 }
 
-// ── Popup drag (mouse) ──
-function initPopupDrag() {
-  var popup = document.getElementById('word-popup');
-  var handle = document.getElementById('popup-handle');
-  var drag=false, sx=0, sy=0, ol=0, ot=0;
-
-  function startDrag(x, y) {
-    drag=true; sx=x; sy=y;
-    ol=parseInt(popup.style.left)||0; ot=parseInt(popup.style.top)||0;
+async function paBuildGraph(seeds){
+  var nodeMap=new Map(), links=[];
+  for(var p of seeds){
+    nodeMap.set(p.paperId,{id:p.paperId,title:p.title||'Untitled',year:p.year||'?',cites:p.citationCount||0,authors:(p.authors||[]).slice(0,3).map(function(a){return a.name;}).join(', '),abstract:p.abstract||'',doi:p.externalIds?.DOI||null,arxiv:p.externalIds?.ArXiv||null,seed:true,cluster:-1,refs:(p.references||[]).map(function(r){return r.paperId;}).filter(Boolean),citedBy:(p.citations||[]).map(function(c){return c.paperId;}).filter(Boolean)});
   }
-  function moveDrag(x, y) {
-    if (!drag) return;
-    var m=8;
-    popup.style.left=Math.max(m,Math.min(ol+x-sx,window.innerWidth-popup.offsetWidth-m))+'px';
-    popup.style.top =Math.max(m,Math.min(ot+y-sy,window.innerHeight-popup.offsetHeight-m))+'px';
+  var toFetch=new Set();
+  for(var[,nd] of nodeMap) [...nd.refs,...nd.citedBy].slice(0,15).forEach(function(id){if(!nodeMap.has(id))toFetch.add(id);});
+  var ids=[...toFetch].slice(0,60);
+  if(ids.length){
+    paShowOverlay('関連論文 '+ids.length+' 件を取得中...');
+    try{
+      var r=await fetch(PA_SS+'/paper/batch?fields=paperId,title,year,citationCount,authors,externalIds',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids:ids})});
+      var data=await r.json();
+      for(var p of (Array.isArray(data)?data:[])){
+        if(!p||!p.paperId) continue;
+        nodeMap.set(p.paperId,{id:p.paperId,title:p.title||'Untitled',year:p.year||'?',cites:p.citationCount||0,authors:(p.authors||[]).slice(0,3).map(function(a){return a.name;}).join(', '),abstract:'',doi:p.externalIds?.DOI||null,arxiv:p.externalIds?.ArXiv||null,seed:false,cluster:-1,refs:[],citedBy:[]});
+      }
+    }catch(e){}
   }
-
-  // Mouse
-  popup.addEventListener('mousedown', function(e){
-    if (e.target.closest('.pa')||e.target.closest('#pbody')) return;
-    startDrag(e.clientX, e.clientY); e.preventDefault();
-  });
-  document.addEventListener('mousemove', function(e){ moveDrag(e.clientX, e.clientY); });
-  document.addEventListener('mouseup', function(){ drag=false; });
-
-  // Touch - handle only to avoid blocking buttons
-  handle.addEventListener('touchstart', function(e){
-    if (e.touches.length !== 1) return;
-    startDrag(e.touches[0].clientX, e.touches[0].clientY);
-    e.stopPropagation();
-  }, {passive:true});
-  document.addEventListener('touchmove', function(e){
-    if (!drag) return;
-    moveDrag(e.touches[0].clientX, e.touches[0].clientY);
-  }, {passive:true});
-  document.addEventListener('touchend', function(){ drag=false; }, {passive:true});
+  var edgeSet=new Set();
+  for(var[srcId,nd] of nodeMap){
+    for(var tgtId of nd.refs){ if(nodeMap.has(tgtId)){var k=[srcId,tgtId].sort().join('|');if(!edgeSet.has(k)){edgeSet.add(k);links.push({source:srcId,target:tgtId});}}}
+    for(var tgtId of nd.citedBy){ if(nodeMap.has(tgtId)){var k=[srcId,tgtId].sort().join('|');if(!edgeSet.has(k)){edgeSet.add(k);links.push({source:tgtId,target:srcId});}}}
+  }
+  paAssignClusters(nodeMap,links);
+  return {nodes:[...nodeMap.values()],links};
 }
 
-function showHistory(history) {
-  if (!history || !history.length) return;
-  // 読書履歴をvocab paneのfooterの上に表示
-  var existing = document.getElementById('history-section');
-  if (existing) existing.remove();
-  var sec = document.createElement('div');
-  sec.id = 'history-section';
-  sec.style.cssText = 'border-top:1px solid var(--border);padding:.75rem 1rem;flex-shrink:0;';
-  sec.innerHTML = '<div style="font-size:10px;color:var(--text3);letter-spacing:.1em;margin-bottom:6px;">最近読んだ資料</div>';
-  history.slice(0,5).forEach(function(h){
-    var row = document.createElement('div');
-    row.style.cssText = 'font-size:11px;color:var(--text2);padding:3px 0;display:flex;justify-content:space-between;';
-    var name = h.filename.length > 20 ? h.filename.substring(0,20)+'…' : h.filename;
-    row.innerHTML = '<span style="color:var(--text)">'+name+'</span><span>'+h.page+'/'+h.total+'p</span>';
-    sec.appendChild(row);
-  });
-  var vfoot = document.querySelector('.vfoot');
-  document.getElementById('vocab-pane').insertBefore(sec, vfoot);
+function paAssignClusters(nodeMap,links){
+  var adj=new Map();
+  for(var[id] of nodeMap) adj.set(id,new Set());
+  for(var l of links){ var s=typeof l.source==='object'?l.source.id:l.source, t=typeof l.target==='object'?l.target.id:l.target; if(adj.has(s))adj.get(s).add(t); if(adj.has(t))adj.get(t).add(s); }
+  var cluster=0, visited=new Set();
+  for(var[id,nd] of nodeMap){
+    if(visited.has(id)) continue;
+    var queue=[id]; visited.add(id);
+    while(queue.length){ var cur=queue.shift(); nodeMap.get(cur).cluster=cluster; for(var nb of(adj.get(cur)||[])){ if(!visited.has(nb)){visited.add(nb);queue.push(nb);} } }
+    cluster++;
+  }
 }
 
-function doSearch() {
-  var word = document.getElementById('search-input').value.trim();
-  if (!word) return;
-  // Position popup in center of screen
-  clickX = window.innerWidth / 2;
-  clickY = window.innerHeight / 2;
-  showPopup(clickX, clickY);
-  lookupByText(word);
-  document.getElementById('search-input').value = '';
+function paRenderGraph(data){
+  paData=data; paHideOverlay();
+  var svg=d3.select('#pa-graph-svg'); svg.selectAll('*').remove();
+  var W=svg.node().clientWidth||900, H=svg.node().clientHeight||600;
+  var g=svg.append('g');
+  paZoomBehavior=d3.zoom().scaleExtent([0.1,4]).on('zoom',function(e){g.attr('transform',e.transform);});
+  svg.call(paZoomBehavior);
+  var colorFn=function(id){return PA_COLORS[id%PA_COLORS.length];};
+  var maxC=Math.max(1,...data.nodes.map(function(n){return n.cites;}));
+  var rScale=d3.scaleSqrt().domain([0,maxC]).range([5,22]);
+  var link=g.append('g').selectAll('line').data(data.links).join('line').attr('class','pa-link');
+  var node=g.append('g').selectAll('g').data(data.nodes).join('g')
+    .attr('class',function(d){return'pa-node'+(d.seed?' seed':'');})
+    .call(d3.drag().on('start',paDragStart).on('drag',paDragged).on('end',paDragEnd))
+    .on('click',function(e,d){e.stopPropagation();paSelectNode(d,link);})
+    .on('mouseover',function(e,d){paShowTooltip(e,d);})
+    .on('mousemove',function(e){paMoveTooltip(e);})
+    .on('mouseout',paHideTooltip);
+  node.append('circle').attr('r',function(d){return rScale(d.cites);}).attr('fill',function(d){return colorFn(d.cluster);}).attr('fill-opacity',.82).attr('stroke',function(d){return d.seed?'#1a1a1a':'transparent';}).attr('stroke-width',function(d){return d.seed?2:0;});
+  node.append('text').attr('dy',function(d){return rScale(d.cites)+11;}).attr('text-anchor','middle').text(function(d){var t=d.title||'';return t.length>22?t.slice(0,20)+'…':t;}).attr('font-size','9px');
+  paSimulation=d3.forceSimulation(data.nodes)
+    .force('link',d3.forceLink(data.links).id(function(d){return d.id;}).distance(80).strength(.5))
+    .force('charge',d3.forceManyBody().strength(-200))
+    .force('center',d3.forceCenter(W/2,H/2))
+    .force('collision',d3.forceCollide().radius(function(d){return rScale(d.cites)+8;}))
+    .on('tick',function(){
+      link.attr('x1',function(d){return d.source.x;}).attr('y1',function(d){return d.source.y;}).attr('x2',function(d){return d.target.x;}).attr('y2',function(d){return d.target.y;});
+      node.attr('transform',function(d){return'translate('+d.x+','+d.y+')';});
+    });
+  document.getElementById('pa-node-count').textContent=data.nodes.length;
+  document.getElementById('pa-edge-count').textContent=data.links.length;
+  paBuildLegend(colorFn);
+  svg.on('click',function(){d3.selectAll('.pa-node').classed('selected',false);d3.selectAll('.pa-link').classed('hl',false);paShowEmptyDetail();});
 }
 
-function setProgress(msg, pct) {
-  document.getElementById('prog-wrap').style.display='block';
-  document.getElementById('prog-label').textContent=msg;
-  document.getElementById('prog-fill').style.width=pct+'%';
+function paSelectNode(d,linkSel){
+  d3.selectAll('.pa-node').classed('selected',function(n){return n.id===d.id;});
+  d3.selectAll('.pa-link').classed('hl',function(l){var s=l.source.id||l.source,t=l.target.id||l.target;return s===d.id||t===d.id;});
+  paShowDetail(d);
 }
 
-function resetApp() {
-  pages=[]; currentPage=0; vocabList=[];
-  setZoom(100); document.getElementById('zoom-slider').value=100;
-  document.getElementById('upload-pane').style.display='flex';
-  document.getElementById('reader-pane').style.display='none';
-  document.getElementById('vocab-pane').style.display='none';
-  document.getElementById('reset-btn').style.display='none';
-  document.getElementById('prog-wrap').style.display='none';
-  document.getElementById('count').textContent='0';
-  document.getElementById('csv-btn').disabled=true;
-  document.getElementById('file-input').value='';
-  closePopup(); closePicker(); updateVocabUI();
+function paShowDetail(d){
+  var el=document.getElementById('pa-paper-detail');
+  var connected=paData.links.filter(function(l){var s=l.source.id||l.source,t=l.target.id||l.target;return s===d.id||t===d.id;}).map(function(l){var oid=(l.source.id||l.source)===d.id?(l.target.id||l.target):(l.source.id||l.source);return paData.nodes.find(function(n){return n.id===oid;});}).filter(Boolean).slice(0,8);
+  el.innerHTML='<div class="pa-card">'
+    +'<div class="pa-card-title">'+d.title+'</div>'
+    +'<div class="pa-card-meta"><span class="pa-tag yr">'+d.year+'</span><span class="pa-tag ct">引用: '+d.cites.toLocaleString()+'</span>'+(d.seed?'<span class="pa-tag sd">SEED</span>':'')+'</div>'
+    +(d.authors?'<div class="pa-card-authors">'+d.authors+(d.authors.includes(',')?' ら':'')+'</div>':'')
+    +(d.abstract?'<div class="pa-card-abstract">'+d.abstract+'</div>':'')
+    +'<div class="pa-card-links">'+(d.doi?'<a href="https://doi.org/'+d.doi+'" target="_blank">DOI</a>':'')+'<a href="https://www.semanticscholar.org/paper/'+d.id+'" target="_blank">S2</a>'+(d.arxiv?'<a href="https://arxiv.org/abs/'+d.arxiv+'" target="_blank">arXiv</a>':'')+'</div>'
+    +(connected.length?'<hr class="pa-divider"><div class="pa-section-lbl">接続された論文 ('+connected.length+')</div><div class="pa-ref-list">'+connected.map(function(p){return'<div class="pa-ref-item" onclick="paSelectById(\''+p.id+'\')">'+(p.title||'').slice(0,60)+(p.title&&p.title.length>60?'…':'')+'<span style="font-family:monospace;font-size:10px;color:var(--pa-text2);display:block">'+p.year+' · 引用 '+p.cites+'</span></div>';}).join('')+'</div>':'')
+    +'</div>';
 }
+
+function paSelectById(id){ var n=paData.nodes.find(function(nd){return nd.id===id;}); if(n) paSelectNode(n,d3.selectAll('.pa-link')); }
+function paShowEmptyDetail(){ document.getElementById('pa-paper-detail').innerHTML='<div class="pa-empty"><div class="ico">◎</div><p>論文ノードをクリックすると詳細が表示されます</p></div>'; }
+function paShowDetailError(msg){ document.getElementById('pa-paper-detail').innerHTML='<div class="pa-error">⚠ '+msg+'</div>'; }
+function paBuildLegend(colorFn){
+  var el=document.getElementById('pa-legend'); el.style.display='block';
+  var clusterNodes={};
+  paData.nodes.forEach(function(n){ if(!clusterNodes[n.cluster]) clusterNodes[n.cluster]=[]; clusterNodes[n.cluster].push(n); });
+  document.getElementById('pa-legend-items').innerHTML=Object.keys(clusterNodes).slice(0,10).map(function(c){
+    var ns=clusterNodes[c]||[];
+    var lbl=ns.length>0?ns.sort(function(a,b){return b.cites-a.cites;})[0].title.slice(0,22)+'…':'Cluster '+c;
+    return'<div class="pa-legend-item"><div class="pa-legend-dot" style="background:'+colorFn(parseInt(c))+'"></div><div class="pa-legend-lbl">'+lbl+'<br><span style="font-size:9px;color:var(--pa-text3)">'+ns.length+' 論文</span></div></div>';
+  }).join('');
+}
+function paShowTooltip(e,d){ var tt=document.getElementById('pa-tooltip'); tt.style.display='block'; tt.innerHTML='<strong>'+(d.title||'').slice(0,55)+((d.title&&d.title.length>55)?'…':'')+'</strong><span class="pa-tt-meta">'+d.year+' · 引用 '+d.cites.toLocaleString()+'</span>'; paMoveTooltip(e); }
+function paMoveTooltip(e){ var tt=document.getElementById('pa-tooltip'); var wrap=document.getElementById('pa-graph-wrap').getBoundingClientRect(); var x=e.clientX-wrap.left+14,y=e.clientY-wrap.top+14; if(x+260>wrap.width) x-=274; tt.style.left=x+'px'; tt.style.top=y+'px'; }
+function paHideTooltip(){ document.getElementById('pa-tooltip').style.display='none'; }
+function paDragStart(e,d){ if(!e.active) paSimulation.alphaTarget(.3).restart(); d.fx=d.x;d.fy=d.y; }
+function paDragged(e,d){ d.fx=e.x;d.fy=e.y; }
+function paDragEnd(e,d){ if(!e.active) paSimulation.alphaTarget(0); d.fx=null;d.fy=null; }
+function paZoomIn(){ d3.select('#pa-graph-svg').transition().duration(300).call(paZoomBehavior.scaleBy,1.4); }
+function paZoomOut(){ d3.select('#pa-graph-svg').transition().duration(300).call(paZoomBehavior.scaleBy,.7); }
+function paResetZoom(){ d3.select('#pa-graph-svg').transition().duration(400).call(paZoomBehavior.transform,d3.zoomIdentity); }
+function paShowOverlay(msg){ document.getElementById('pa-overlay-msg').textContent=msg; document.getElementById('pa-overlay').classList.remove('hidden'); }
+function paHideOverlay(){ document.getElementById('pa-overlay').classList.add('hidden'); }
+function paHideWelcome(){ document.getElementById('pa-welcome').classList.add('hidden'); }
 </script>
 </body>
 </html>
