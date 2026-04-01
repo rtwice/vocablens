@@ -439,7 +439,18 @@ body{font-family:'JetBrains Mono',monospace;height:100vh;height:100dvh;display:f
       <input id="pa-search-input" type="text" placeholder="例: hippocampus place cells spatial navigation" onkeydown="if(event.key==='Enter')paSearch()"/>
       <button id="pa-search-btn" onclick="paSearch()">検索 →</button>
     </div>
-    <div style="display:flex;gap:6px;margin-left:auto;flex-shrink:0;">
+    <div style="display:flex;align-items:center;gap:8px;margin-left:auto;flex-shrink:0;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:5px;">
+        <label style="font-family:JetBrains Mono,monospace;font-size:11px;color:var(--pa-text2);">発表年</label>
+        <input type="number" id="pa-year-min" min="1900" max="2030" placeholder="1990"
+          style="width:58px;padding:4px 6px;background:var(--pa-surface2);border:1px solid var(--pa-border);border-radius:5px;font-family:JetBrains Mono,monospace;font-size:11px;color:var(--pa-text);outline:none;"
+          oninput="paApplyYearFilter()">
+        <span style="font-size:11px;color:var(--pa-text3);">–</span>
+        <input type="number" id="pa-year-max" min="1900" max="2030" placeholder="2025"
+          style="width:58px;padding:4px 6px;background:var(--pa-surface2);border:1px solid var(--pa-border);border-radius:5px;font-family:JetBrains Mono,monospace;font-size:11px;color:var(--pa-text);outline:none;"
+          oninput="paApplyYearFilter()">
+      </div>
+      <button onclick="paSavePNG()" style="padding:5px 12px;background:var(--pa-surface);border:1px solid var(--pa-border);border-radius:6px;font-family:JetBrains Mono,monospace;font-size:11px;color:var(--pa-text2);cursor:pointer;transition:all .15s;" onmouseover="this.style.borderColor='var(--pa-accent)';this.style.color='var(--pa-accent)'" onmouseout="this.style.borderColor='var(--pa-border)';this.style.color='var(--pa-text2)'">PNG保存</button>
       <div class="pa-stat">ノード: <span id="pa-node-count">0</span></div>
       <div class="pa-stat">エッジ: <span id="pa-edge-count">0</span></div>
     </div>
@@ -926,7 +937,7 @@ function paConvertWork(w, isSeed){
 }
 
 async function paFetchByKeyword(q){
-  var url = PA_OA+'/works?search='+encodeURIComponent(q)+'&per-page=8&select=id,display_name,publication_year,cited_by_count,authorships,doi,referenced_works,abstract_inverted_index,locations&mailto=paperatlas@example.com';
+  var url = PA_OA+'/works?search='+encodeURIComponent(q)+'&per-page=20&select=id,display_name,publication_year,cited_by_count,authorships,doi,referenced_works,abstract_inverted_index,locations&mailto=paperatlas@example.com';
   var r = await fetch(url);
   if(!r.ok){ var e=await r.json().catch(function(){return{};}); throw new Error('検索エラー (HTTP '+r.status+'): '+(e.error||'')); }
   var d = await r.json();
@@ -956,19 +967,19 @@ async function paBuildGraph(seeds){
   // 参照先IDを収集（シードのrefs）
   var toFetch=new Set();
   for(var[,nd] of nodeMap){
-    nd.refs.slice(0,20).forEach(function(id){ if(!nodeMap.has(id)) toFetch.add(id); });
+    nd.refs.slice(0,50).forEach(function(id){ if(!nodeMap.has(id)) toFetch.add(id); });
   }
-  var ids=[...toFetch].slice(0,60);
+  var ids=[...toFetch].slice(0,480);
 
   if(ids.length){
     paShowOverlay('関連論文 '+ids.length+' 件を取得中...');
     // OpenAlexはfilter=openalex_id:W...|W...でバッチ取得可能
     var chunks = [];
-    for(var i=0;i<ids.length;i+=50) chunks.push(ids.slice(i,i+50));
+    for(var i=0;i<ids.length;i+=200) chunks.push(ids.slice(i,i+200));
     for(var chunk of chunks){
       try{
         var filter = 'openalex_id:'+ chunk.map(function(id){ return id.startsWith('W')?id:'W'+id; }).join('|');
-        var url = PA_OA+'/works?filter='+encodeURIComponent(filter)+'&per-page=50&select=id,display_name,publication_year,cited_by_count,authorships,doi,locations&mailto=paperatlas@example.com';
+        var url = PA_OA+'/works?filter='+encodeURIComponent(filter)+'&per-page=200&select=id,display_name,publication_year,cited_by_count,authorships,doi,locations&mailto=paperatlas@example.com';
         var r = await fetch(url);
         var data = await r.json();
         for(var w of (data.results||[])){
@@ -1008,6 +1019,8 @@ function paAssignClusters(nodeMap,links){
 
 function paRenderGraph(data){
   paData=data; paHideOverlay();
+  // 初回のみ全データを保存（年フィルター用）
+  if(data.nodes.length > (paAllData.nodes.length||0)) paAllData = JSON.parse(JSON.stringify(data));
   var svg=d3.select('#pa-graph-svg'); svg.selectAll('*').remove();
   var W=svg.node().clientWidth||900, H=svg.node().clientHeight||600;
   var g=svg.append('g');
@@ -1025,12 +1038,18 @@ function paRenderGraph(data){
     .on('mousemove',function(e){paMoveTooltip(e);})
     .on('mouseout',paHideTooltip);
   node.append('circle').attr('r',function(d){return rScale(d.cites);}).attr('fill',function(d){return colorFn(d.cluster);}).attr('fill-opacity',.82).attr('stroke',function(d){return d.seed?'#1a1a1a':'transparent';}).attr('stroke-width',function(d){return d.seed?2:0;});
-  node.append('text').attr('dy',function(d){return rScale(d.cites)+11;}).attr('text-anchor','middle').text(function(d){var t=d.title||'';return t.length>22?t.slice(0,20)+'…':t;}).attr('font-size','9px');
+  node.append('text').attr('dy',function(d){return rScale(d.cites)+11;}).attr('text-anchor','middle').text(function(d){
+      // ノード数が多い場合は引用数上位のみラベル表示
+      if(paData.nodes.length > 150 && d.cites < 20 && !d.seed) return '';
+      var t=d.title||'';return t.length>22?t.slice(0,20)+'…':t;
+    }).attr('font-size','9px');
   paSimulation=d3.forceSimulation(data.nodes)
-    .force('link',d3.forceLink(data.links).id(function(d){return d.id;}).distance(80).strength(.5))
-    .force('charge',d3.forceManyBody().strength(-200))
+    .force('link',d3.forceLink(data.links).id(function(d){return d.id;}).distance(60).strength(0.4))
+    .force('charge',d3.forceManyBody().strength(-120))
     .force('center',d3.forceCenter(W/2,H/2))
-    .force('collision',d3.forceCollide().radius(function(d){return rScale(d.cites)+8;}))
+    .alphaDecay(0.03)
+    .velocityDecay(0.4)
+    .force('collision',d3.forceCollide().radius(function(d){return rScale(d.cites)+4;}))
     .on('tick',function(){
       link.attr('x1',function(d){return d.source.x;}).attr('y1',function(d){return d.source.y;}).attr('x2',function(d){return d.target.x;}).attr('y2',function(d){return d.target.y;});
       node.attr('transform',function(d){return'translate('+d.x+','+d.y+')';});
@@ -1055,7 +1074,7 @@ function paShowDetail(d){
     +'<div class="pa-card-meta"><span class="pa-tag yr">'+d.year+'</span><span class="pa-tag ct">引用: '+d.cites.toLocaleString()+'</span>'+(d.seed?'<span class="pa-tag sd">SEED</span>':'')+'</div>'
     +(d.authors?'<div class="pa-card-authors">'+d.authors+(d.authors.includes(',')?' ら':'')+'</div>':'')
     +(d.abstract?'<div class="pa-card-abstract">'+d.abstract+'</div>':'')
-    +'<div class="pa-card-links">'+(d.doi?'<a href="https://doi.org/'+d.doi+'" target="_blank">DOI</a>':'')+'<a href="https://openalex.org/'+d.id+'" target="_blank">OpenAlex</a>'+(d.arxiv?'<a href="https://arxiv.org/abs/'+d.arxiv+'" target="_blank">arXiv</a>':'')+'</div>'
+    +'<div class="pa-card-links">'+(d.doi?'<a href="https://doi.org/'+d.doi+'" target="_blank">DOI 🔗</a>':'')+(d.arxiv?'<a href="https://arxiv.org/abs/'+d.arxiv+'" target="_blank">arXiv 🔗</a>':'')+'<a href="https://openalex.org/'+d.id+'" target="_blank">OpenAlex</a>'+'</div>'
     +(connected.length?'<hr class="pa-divider"><div class="pa-section-lbl">接続された論文 ('+connected.length+')</div><div class="pa-ref-list">'+connected.map(function(p){return'<div class="pa-ref-item" onclick="paSelectById(\''+p.id+'\')">'+(p.title||'').slice(0,60)+(p.title&&p.title.length>60?'…':'')+'<span style="font-family:monospace;font-size:10px;color:var(--pa-text2);display:block">'+p.year+' · 引用 '+p.cites+'</span></div>';}).join('')+'</div>':'')
     +'</div>';
 }
@@ -1085,6 +1104,62 @@ function paResetZoom(){ d3.select('#pa-graph-svg').transition().duration(400).ca
 function paShowOverlay(msg){ document.getElementById('pa-overlay-msg').textContent=msg; document.getElementById('pa-overlay').classList.remove('hidden'); }
 function paHideOverlay(){ document.getElementById('pa-overlay').classList.add('hidden'); }
 function paHideWelcome(){ document.getElementById('pa-welcome').classList.add('hidden'); }
+
+// ── PNG保存 ──
+function paSavePNG(){
+  var svg = document.getElementById('pa-graph-svg');
+  if(!svg) return;
+  var wrap = document.getElementById('pa-graph-wrap');
+  var W = wrap.clientWidth, H = wrap.clientHeight;
+  var serializer = new XMLSerializer();
+  // SVGにフォントと背景を埋め込む
+  var clone = svg.cloneNode(true);
+  clone.setAttribute('width', W);
+  clone.setAttribute('height', H);
+  // 背景矩形
+  var bg = document.createElementNS('http://www.w3.org/2000/svg','rect');
+  bg.setAttribute('width','100%'); bg.setAttribute('height','100%');
+  bg.setAttribute('fill','#f5f3ef');
+  clone.insertBefore(bg, clone.firstChild);
+  var svgStr = serializer.serializeToString(clone);
+  var blob = new Blob([svgStr], {type:'image/svg+xml'});
+  var url = URL.createObjectURL(blob);
+  // SVG→Canvas→PNG
+  var img = new Image();
+  img.onload = function(){
+    var canvas = document.createElement('canvas');
+    canvas.width = W * 2; canvas.height = H * 2; // Retina
+    var ctx = canvas.getContext('2d');
+    ctx.scale(2,2);
+    ctx.fillStyle = '#f5f3ef';
+    ctx.fillRect(0,0,W,H);
+    ctx.drawImage(img,0,0,W,H);
+    URL.revokeObjectURL(url);
+    var a = document.createElement('a');
+    a.download = 'paperatlas_' + (document.getElementById('pa-search-input').value.trim().replace(/\s+/g,'_').slice(0,30)||'graph') + '.png';
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+  };
+  img.src = url;
+}
+
+// ── 年フィルター ──
+var paAllData = {nodes:[], links:[]};
+function paApplyYearFilter(){
+  if(!paAllData.nodes.length) return;
+  var minY = parseInt(document.getElementById('pa-year-min').value)||0;
+  var maxY = parseInt(document.getElementById('pa-year-max').value)||9999;
+  var filtered = {
+    nodes: paAllData.nodes.filter(function(n){ var y=parseInt(n.year)||0; return y>=minY && y<=maxY; }),
+    links: []
+  };
+  var nodeIds = new Set(filtered.nodes.map(function(n){return n.id;}));
+  filtered.links = paAllData.links.filter(function(l){
+    var s=l.source.id||l.source, t=l.target.id||l.target;
+    return nodeIds.has(s) && nodeIds.has(t);
+  });
+  paRenderGraph(filtered);
+}
 </script>
 </body>
 </html>
