@@ -969,23 +969,27 @@ async function paBuildGraph(seeds){
   for(var[,nd] of nodeMap){
     nd.refs.slice(0,50).forEach(function(id){ if(!nodeMap.has(id)) toFetch.add(id); });
   }
-  var ids=[...toFetch].slice(0,480);
+  var ids=[...toFetch].slice(0,200);
 
   if(ids.length){
-    paShowOverlay('関連論文 '+ids.length+' 件を取得中...');
-    // OpenAlexはfilter=openalex_id:W...|W...でバッチ取得可能
+    paShowOverlay('関連論文 '+ids.length+' 件を取得中... (しばらくお待ちください)');
+    // OpenAlexはids.openalex:W1|W2形式でOR検索、チャンク25件以内
     var chunks = [];
-    for(var i=0;i<ids.length;i+=200) chunks.push(ids.slice(i,i+200));
+    for(var i=0;i<ids.length;i+=25) chunks.push(ids.slice(i,i+25));
     for(var chunk of chunks){
       try{
-        var filter = 'openalex_id:'+ chunk.map(function(id){ return id.startsWith('W')?id:'W'+id; }).join('|');
-        var url = PA_OA+'/works?filter='+encodeURIComponent(filter)+'&per-page=200&select=id,display_name,publication_year,cited_by_count,authorships,doi,locations&mailto=paperatlas@example.com';
+        var normalized = chunk.map(function(id){ return (id.startsWith('W')||id.startsWith('w'))?id.toUpperCase():'W'+id; });
+        var filter = 'ids.openalex:' + normalized.join('|');
+        var url = PA_OA+'/works?filter='+encodeURIComponent(filter)+'&per-page=25&select=id,display_name,publication_year,cited_by_count,authorships,doi,abstract_inverted_index,locations&mailto=paperatlas@example.com';
         var r = await fetch(url);
+        if(!r.ok) continue;
         var data = await r.json();
         for(var w of (data.results||[])){
           var p = paConvertWork(w,false);
           if(p&&!nodeMap.has(p.id)) nodeMap.set(p.id,p);
         }
+        // レートリミット回避のため少し待機
+        await new Promise(function(res){setTimeout(res,120);});
       }catch(e){}
     }
   }
