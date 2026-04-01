@@ -869,7 +869,8 @@ function vlInitPopupDrag(){
 // ══════════════════════════════════════
 // PAPERATLAS
 // ══════════════════════════════════════
-var PA_SS = 'https://api.semanticscholar.org/graph/v1';
+// OpenAlex API — CORS対応・完全無料
+var PA_OA = 'https://api.openalex.org';
 var PA_COLORS = ['#4a6fa5','#c0392b','#2d8a6e','#d4841a','#8e44ad','#1a7a8a','#6d7a2d','#c0612b','#2c3e7a','#7a2c5e'];
 var paData = {nodes:[],links:[]};
 var paMode = 'keyword';
@@ -898,41 +899,94 @@ async function paSearch(){
   }catch(e){ paHideOverlay(); paShowDetailError(e.message); }
 }
 
-async function paFetchByKeyword(q){
-  var r=await fetch(PA_SS+'/paper/search?query='+encodeURIComponent(q)+'&limit=8&fields=paperId,title,year,citationCount,authors,abstract,references,citations,externalIds');
-  var d=await r.json(); return (d.data||[]).filter(function(p){return p.paperId;});
+// OpenAlexのworkオブジェクトを内部形式に変換
+function paConvertWork(w, isSeed){
+  if(!w||!w.id) return null;
+  var id = w.id.replace('https://openalex.org/','');
+  var authors = (w.authorships||[]).slice(0,3).map(function(a){ return a.author&&a.author.display_name||''; }).filter(Boolean).join(', ');
+  var doi = w.doi ? w.doi.replace('https://doi.org/','') : null;
+  var arxiv = null;
+  (w.locations||[]).forEach(function(loc){ if(loc.landing_page_url&&loc.landing_page_url.includes('arxiv.org')){ var m=loc.landing_page_url.match(/abs\/(\d{4}\.\d+)/); if(m) arxiv=m[1]; } });
+  var refs = (w.referenced_works||[]).map(function(r){ return r.replace('https://openalex.org/',''); });
+  var citedBy = []; // OpenAlexはcitations listを返さないため空
+  return {
+    id: id,
+    title: w.display_name||'Untitled',
+    year: w.publication_year||'?',
+    cites: w.cited_by_count||0,
+    authors: authors,
+    abstract: w.abstract||'',
+    doi: doi, arxiv: arxiv,
+    seed: isSeed||false,
+    cluster: -1,
+    refs: refs,
+    citedBy: citedBy,
+    oaUrl: w.id
+  };
 }
+
+async function paFetchByKeyword(q){
+  var url = PA_OA+'/works?search='+encodeURIComponent(q)+'&per-page=8&select=id,display_name,publication_year,cited_by_count,authorships,abstract,doi,referenced_works,locations&mailto=paperatlas@example.com';
+  var r = await fetch(url);
+  var d = await r.json();
+  return (d.results||[]).map(function(w){ return paConvertWork(w,true); }).filter(Boolean);
+}
+
 async function paFetchByTitleOrDOI(q){
-  var dm=q.match(/10\.\d{4,}[\/.].+/);
-  if(dm){ var r=await fetch(PA_SS+'/paper/DOI:'+encodeURIComponent(dm[0])+'?fields=paperId,title,year,citationCount,authors,abstract,references,citations,externalIds'); if(r.ok){var d=await r.json();if(d.paperId)return[d];} }
-  var am=q.match(/\d{4}\.\d{4,}/);
-  if(am){ var r=await fetch(PA_SS+'/paper/ARXIV:'+am[0]+'?fields=paperId,title,year,citationCount,authors,abstract,references,citations,externalIds'); if(r.ok){var d=await r.json();if(d.paperId)return[d];} }
+  // DOI check
+  var dm = q.match(/10\.\d{4,}[\/.].+/);
+  if(dm){
+    var url = PA_OA+'/works/https://doi.org/'+encodeURIComponent(dm[0])+'?select=id,display_name,publication_year,cited_by_count,authorships,abstract,doi,referenced_works,locations&mailto=paperatlas@example.com';
+    try{ var r=await fetch(url); if(r.ok){ var d=await r.json(); var p=paConvertWork(d,true); if(p) return [p]; } }catch(e){}
+  }
+  // arXiv check
+  var am = q.match(/\d{4}\.\d{4,}/);
+  if(am){
+    var url = PA_OA+'/works/https://arxiv.org/abs/'+am[0]+'?select=id,display_name,publication_year,cited_by_count,authorships,abstract,doi,referenced_works,locations&mailto=paperatlas@example.com';
+    try{ var r=await fetch(url); if(r.ok){ var d=await r.json(); var p=paConvertWork(d,true); if(p) return [p]; } }catch(e){}
+  }
   return paFetchByKeyword(q);
 }
 
 async function paBuildGraph(seeds){
   var nodeMap=new Map(), links=[];
-  for(var p of seeds){
-    nodeMap.set(p.paperId,{id:p.paperId,title:p.title||'Untitled',year:p.year||'?',cites:p.citationCount||0,authors:(p.authors||[]).slice(0,3).map(function(a){return a.name;}).join(', '),abstract:p.abstract||'',doi:p.externalIds?.DOI||null,arxiv:p.externalIds?.ArXiv||null,seed:true,cluster:-1,refs:(p.references||[]).map(function(r){return r.paperId;}).filter(Boolean),citedBy:(p.citations||[]).map(function(c){return c.paperId;}).filter(Boolean)});
-  }
+  for(var p of seeds) nodeMap.set(p.id, p);
+
+  // 参照先IDを収集（シードのrefs）
   var toFetch=new Set();
-  for(var[,nd] of nodeMap) [...nd.refs,...nd.citedBy].slice(0,15).forEach(function(id){if(!nodeMap.has(id))toFetch.add(id);});
+  for(var[,nd] of nodeMap){
+    nd.refs.slice(0,20).forEach(function(id){ if(!nodeMap.has(id)) toFetch.add(id); });
+  }
   var ids=[...toFetch].slice(0,60);
+
   if(ids.length){
     paShowOverlay('関連論文 '+ids.length+' 件を取得中...');
-    try{
-      var r=await fetch(PA_SS+'/paper/batch?fields=paperId,title,year,citationCount,authors,externalIds',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids:ids})});
-      var data=await r.json();
-      for(var p of (Array.isArray(data)?data:[])){
-        if(!p||!p.paperId) continue;
-        nodeMap.set(p.paperId,{id:p.paperId,title:p.title||'Untitled',year:p.year||'?',cites:p.citationCount||0,authors:(p.authors||[]).slice(0,3).map(function(a){return a.name;}).join(', '),abstract:'',doi:p.externalIds?.DOI||null,arxiv:p.externalIds?.ArXiv||null,seed:false,cluster:-1,refs:[],citedBy:[]});
-      }
-    }catch(e){}
+    // OpenAlexはfilter=openalex_id:W...|W...でバッチ取得可能
+    var chunks = [];
+    for(var i=0;i<ids.length;i+=50) chunks.push(ids.slice(i,i+50));
+    for(var chunk of chunks){
+      try{
+        var filter = 'openalex_id:'+ chunk.map(function(id){ return id.startsWith('W')?id:'W'+id; }).join('|');
+        var url = PA_OA+'/works?filter='+encodeURIComponent(filter)+'&per-page=50&select=id,display_name,publication_year,cited_by_count,authorships,doi,locations&mailto=paperatlas@example.com';
+        var r = await fetch(url);
+        var data = await r.json();
+        for(var w of (data.results||[])){
+          var p = paConvertWork(w,false);
+          if(p&&!nodeMap.has(p.id)) nodeMap.set(p.id,p);
+        }
+      }catch(e){}
+    }
   }
+
+  // エッジ構築（refs方向）
   var edgeSet=new Set();
   for(var[srcId,nd] of nodeMap){
-    for(var tgtId of nd.refs){ if(nodeMap.has(tgtId)){var k=[srcId,tgtId].sort().join('|');if(!edgeSet.has(k)){edgeSet.add(k);links.push({source:srcId,target:tgtId});}}}
-    for(var tgtId of nd.citedBy){ if(nodeMap.has(tgtId)){var k=[srcId,tgtId].sort().join('|');if(!edgeSet.has(k)){edgeSet.add(k);links.push({source:tgtId,target:srcId});}}}
+    for(var tgtId of nd.refs){
+      if(nodeMap.has(tgtId)){
+        var k=[srcId,tgtId].sort().join('|');
+        if(!edgeSet.has(k)){ edgeSet.add(k); links.push({source:srcId,target:tgtId}); }
+      }
+    }
   }
   paAssignClusters(nodeMap,links);
   return {nodes:[...nodeMap.values()],links};
@@ -1000,7 +1054,7 @@ function paShowDetail(d){
     +'<div class="pa-card-meta"><span class="pa-tag yr">'+d.year+'</span><span class="pa-tag ct">引用: '+d.cites.toLocaleString()+'</span>'+(d.seed?'<span class="pa-tag sd">SEED</span>':'')+'</div>'
     +(d.authors?'<div class="pa-card-authors">'+d.authors+(d.authors.includes(',')?' ら':'')+'</div>':'')
     +(d.abstract?'<div class="pa-card-abstract">'+d.abstract+'</div>':'')
-    +'<div class="pa-card-links">'+(d.doi?'<a href="https://doi.org/'+d.doi+'" target="_blank">DOI</a>':'')+'<a href="https://www.semanticscholar.org/paper/'+d.id+'" target="_blank">S2</a>'+(d.arxiv?'<a href="https://arxiv.org/abs/'+d.arxiv+'" target="_blank">arXiv</a>':'')+'</div>'
+    +'<div class="pa-card-links">'+(d.doi?'<a href="https://doi.org/'+d.doi+'" target="_blank">DOI</a>':'')+'<a href="https://openalex.org/'+d.id+'" target="_blank">OpenAlex</a>'+(d.arxiv?'<a href="https://arxiv.org/abs/'+d.arxiv+'" target="_blank">arXiv</a>':'')+'</div>'
     +(connected.length?'<hr class="pa-divider"><div class="pa-section-lbl">接続された論文 ('+connected.length+')</div><div class="pa-ref-list">'+connected.map(function(p){return'<div class="pa-ref-item" onclick="paSelectById(\''+p.id+'\')">'+(p.title||'').slice(0,60)+(p.title&&p.title.length>60?'…':'')+'<span style="font-family:monospace;font-size:10px;color:var(--pa-text2);display:block">'+p.year+' · 引用 '+p.cites+'</span></div>';}).join('')+'</div>':'')
     +'</div>';
 }
